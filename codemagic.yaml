@@ -5,7 +5,7 @@ workflows:
     environment:
       # Codemagic já fornece Xcode/Android SDK quando necessário
       vars:
-        API_BASE_URL: https://crm.loguscapital.com/api
+        API_BASE_URL: https://crmapi.loguscapital.com:446/api
         LOG_NETWORK: "false"
     scripts:
 #      - name: Use Flutter channel stable

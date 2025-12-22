@@ -20,10 +20,10 @@ Aplicativo Flutter (Android/iOS) que consome a API `LogusCrmApi` para autentica�
    cd crm_mobile_logus
    flutter pub get
    ```
-2. Informe a URL da API ao subir o app:
+2. Informe a URL da API ao subir o app (por padrão usamos a API pública `https://crmapi.loguscapital.com:446/api`):
    ```bash
    flutter run \
-     --dart-define API_BASE_URL=http://10.0.2.2:5283/api
+     --dart-define API_BASE_URL=http://10.0.2.2:5283/api   # para ambiente local
    ```
    - Para dispositivos físicos, substitua pelo IP da máquina onde a API está rodando.
    - No iOS, verifique se a rede está acessível; o `Info.plist` já libera HTTP simples para desenvolvimento.
