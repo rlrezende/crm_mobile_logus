@@ -9,6 +9,9 @@ workflows:
         API_BASE_URL: https://crm.loguscapital.com/api
         LOG_NETWORK: "false"
     scripts:
+#      - name: Use Flutter channel stable
+#        script: |
+#          echo "Skipping default Flutter install"
       - name: Setup Flutter 3.24.0
         script: |
           git clone --branch 3.24.0 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_24
