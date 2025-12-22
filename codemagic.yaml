@@ -20,6 +20,11 @@ workflows:
           flutter build apk --release \
             --dart-define API_BASE_URL=$API_BASE_URL \
             --dart-define LOG_NETWORK=$LOG_NETWORK
+      - name: Build Android App Bundle (release)
+        script: |
+          flutter build appbundle --release \
+            --dart-define API_BASE_URL=$API_BASE_URL \
+            --dart-define LOG_NETWORK=$LOG_NETWORK
       - name: Build iOS (release)
         script: |
           flutter build ios --release --no-codesign \
@@ -27,5 +32,6 @@ workflows:
             --dart-define LOG_NETWORK=$LOG_NETWORK
     artifacts:
       - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
