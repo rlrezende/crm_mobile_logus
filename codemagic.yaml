@@ -14,28 +14,34 @@ workflows:
       - name: Setup Flutter 3.24.0
         script: |
           git clone --branch 3.24.0 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_24
-          export PATH=/tmp/flutter_3_24/bin:$PATH
-          echo 'export PATH=/tmp/flutter_3_24/bin:$PATH' >> $CM_ENV
-          flutter --version
+          export FLUTTER_HOME=/tmp/flutter_3_24
+          export FLUTTER_BIN=$FLUTTER_HOME/bin/flutter
+          export PATH=$FLUTTER_HOME/bin:$PATH
+          {
+            echo 'export FLUTTER_HOME=/tmp/flutter_3_24'
+            echo 'export FLUTTER_BIN=/tmp/flutter_3_24/bin/flutter'
+            echo 'export PATH=/tmp/flutter_3_24/bin:$PATH'
+          } >> $CM_ENV
+          $FLUTTER_BIN --version
       - name: Install dependencies
         script: |
-          flutter pub get
+          $FLUTTER_BIN pub get
       - name: Run tests
         script: |
-          flutter test
+          $FLUTTER_BIN test
       - name: Build Android APK (release)
         script: |
-          flutter build apk --release \
+          $FLUTTER_BIN build apk --release \
             --dart-define API_BASE_URL=$API_BASE_URL \
             --dart-define LOG_NETWORK=$LOG_NETWORK
       - name: Build Android App Bundle (release)
         script: |
-          flutter build appbundle --release \
+          $FLUTTER_BIN build appbundle --release \
             --dart-define API_BASE_URL=$API_BASE_URL \
             --dart-define LOG_NETWORK=$LOG_NETWORK
       - name: Build iOS (release)
         script: |
-          flutter build ios --release --no-codesign \
+          $FLUTTER_BIN build ios --release --no-codesign \
             --dart-define API_BASE_URL=$API_BASE_URL \
             --dart-define LOG_NETWORK=$LOG_NETWORK
     artifacts:
