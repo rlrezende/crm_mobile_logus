@@ -12,8 +12,9 @@ workflows:
       - name: Setup Flutter 3.24.0
         script: |
           git clone --branch 3.24.0 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_24
+          export PATH=/tmp/flutter_3_24/bin:$PATH
           echo 'export PATH=/tmp/flutter_3_24/bin:$PATH' >> $CM_ENV
-          /tmp/flutter_3_24/bin/flutter --version
+          flutter --version
       - name: Install dependencies
         script: |
           flutter pub get
