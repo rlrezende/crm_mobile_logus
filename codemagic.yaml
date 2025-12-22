@@ -17,6 +17,8 @@ workflows:
           /tmp/flutter_3_24/bin/flutter --version
       - name: Ensure Android SDK 34
         script: |
+          export ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-$ANDROID_HOME}
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
           yes | sdkmanager --licenses >/dev/null || true
           yes | sdkmanager "platforms;android-34" "build-tools;34.0.0"
       - name: Install dependencies
