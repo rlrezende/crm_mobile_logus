@@ -1,0 +1,31 @@
+workflows:
+  release-builds:
+    name: Logus CRM Mobile
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      # Codemagic já fornece Xcode/Android SDK quando necessário
+      vars:
+        API_BASE_URL: https://crm.loguscapital.com/api
+        LOG_NETWORK: "false"
+    scripts:
+      - name: Install dependencies
+        script: |
+          flutter pub get
+      - name: Run tests
+        script: |
+          flutter test
+      - name: Build Android APK (release)
+        script: |
+          flutter build apk --release \
+            --dart-define API_BASE_URL=$API_BASE_URL \
+            --dart-define LOG_NETWORK=$LOG_NETWORK
+      - name: Build iOS (release)
+        script: |
+          flutter build ios --release --no-codesign \
+            --dart-define API_BASE_URL=$API_BASE_URL \
+            --dart-define LOG_NETWORK=$LOG_NETWORK
+    artifacts:
+      - build/**/outputs/**/*.apk
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
