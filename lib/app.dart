@@ -10,6 +10,7 @@ import 'features/alerts/presentation/pages/dashboard_page.dart';
 import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/presentation/controllers/auth_controller.dart';
 import 'features/auth/presentation/pages/login_page.dart';
+import 'features/dashboard/data/repositories/customer_dashboard_repository.dart';
 
 class LogusCrmApp extends StatelessWidget {
   const LogusCrmApp({
@@ -36,6 +37,9 @@ class LogusCrmApp extends StatelessWidget {
         Provider.value(value: config),
         Provider.value(value: apiClient),
         Provider.value(value: alertRepository),
+        Provider(
+          create: (_) => CustomerDashboardRepository(apiClient: apiClient),
+        ),
         Provider.value(value: tokenStorage),
         ChangeNotifierProvider(
           create: (_) => AuthController(

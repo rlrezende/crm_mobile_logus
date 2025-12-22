@@ -11,6 +11,17 @@ DateTime? _parseDate(dynamic value) {
   return null;
 }
 
+T? _access<T>(Map<String, dynamic> json, String key) {
+  if (json.containsKey(key)) {
+    return json[key] as T?;
+  }
+  final pascalKey = '${key[0].toUpperCase()}${key.substring(1)}';
+  if (json.containsKey(pascalKey)) {
+    return json[pascalKey] as T?;
+  }
+  return null;
+}
+
 class Alert {
   Alert({
     required this.id,
@@ -47,23 +58,28 @@ class Alert {
   final bool quietHoursActive;
 
   factory Alert.fromJson(Map<String, dynamic> json) {
-    final channels = unwrapList(json['channelsSent']).map((e) => e.toString()).toList();
+    final channels = unwrapList(json['channelsSent'] ?? json['ChannelsSent']).map((e) => e.toString()).toList();
     return Alert(
-      id: json['id'] as String,
-      personId: json['pessoaId'] as String,
-      clientName: json['clienteNome'] as String? ?? json['pessoa']?['nome'] as String? ?? '',
-      type: AlertType.fromJson(json['type']),
-      title: json['title'] as String? ?? '',
-      description: json['description'] as String?,
-      referenceDate: _parseDate(json['referenceDate']) ?? DateTime.now().toUtc(),
-      severity: AlertSeverity.fromJson(json['severity']),
-      status: AlertStatus.fromJson(json['status']),
-      createdDate: _parseDate(json['createdDate']) ?? DateTime.now().toUtc(),
-      updatedDate: _parseDate(json['updatedDate']),
-      snoozedUntil: _parseDate(json['snoozedUntil']),
+      id: _access<String>(json, 'id') ?? '',
+      personId: _access<String>(json, 'pessoaId') ?? '',
+      clientName: _access<String>(json, 'clienteNome') ??
+          (json['pessoa']?['nome'] as String? ?? ''),
+      type: AlertType.fromJson(json['type'] ?? json['Type']),
+      title: _access<String>(json, 'title') ?? '',
+      description: _access<String>(json, 'description'),
+      referenceDate: _parseDate(json['referenceDate'] ?? json['ReferenceDate']) ?? DateTime.now().toUtc(),
+      severity: AlertSeverity.fromJson(json['severity'] ?? json['Severity']),
+      status: AlertStatus.fromJson(json['status'] ?? json['Status']),
+      createdDate: _parseDate(json['createdDate'] ?? json['CreatedDate']) ?? DateTime.now().toUtc(),
+      updatedDate: _parseDate(json['updatedDate'] ?? json['UpdatedDate']),
+      snoozedUntil: _parseDate(json['snoozedUntil'] ?? json['SnoozedUntil']),
       channelsSent: channels,
-      daysFromReference: (json['daysFromReference'] as num?)?.toInt(),
-      quietHoursActive: json['quietHoursActive'] as bool? ?? false,
+      daysFromReference: (json['daysFromReference'] as num? ??
+              json['DaysFromReference'] as num?)
+          ?.toInt(),
+      quietHoursActive: (json['quietHoursActive'] as bool?) ??
+          (json['QuietHoursActive'] as bool?) ??
+          false,
     );
   }
 }

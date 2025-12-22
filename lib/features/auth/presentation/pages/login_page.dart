@@ -50,122 +50,155 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Consumer<AuthController>(
-          builder: (context, controller, _) {
-            final showBiometricButton = controller.canUseBiometrics;
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 48),
-                  Text(
-                    'Logus CRM Mobile',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Entre com suas credenciais para acessar os alertas e módulos do CRM.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 32),
-                  if (controller.errorMessage != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(8),
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: const AssetImage('assets/images/fundo_logus.png'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.65), BlendMode.darken),
+          ),
+        ),
+        child: SafeArea(
+          child: Consumer<AuthController>(
+            builder: (context, controller, _) {
+              final showBiometricButton = controller.canUseBiometrics;
+              final widgets = <Widget>[
+                const SizedBox(height: 32),
+                Image.asset(
+                  'assets/images/logus_logo.png',
+                  height: 60,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Bem-vindo ao Logus Capital',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: Text(
-                        controller.errorMessage!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onErrorContainer,
-                        ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Faça login para acompanhar seus alertas e investimentos com segurança.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+                const SizedBox(height: 32),
+              ];
+
+              final error = controller.errorMessage;
+              if (error != null) {
+                widgets.addAll([
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      error,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
                       ),
                     ),
-                  if (controller.errorMessage != null) const SizedBox(height: 16),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'E-mail corporativo',
-                            prefixIcon: Icon(Icons.person_outline),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Informe o e-mail';
-                            }
-                            return null;
-                          },
+                  ),
+                  const SizedBox(height: 16),
+                ]);
+              }
+
+              widgets.add(
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          labelText: 'E-mail corporativo',
+                          prefixIcon: Icon(Icons.person_outline),
                         ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          decoration: InputDecoration(
-                            labelText: 'Senha',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                              ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Informe o e-mail';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          labelText: 'Senha',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
                             ),
                           ),
-                          obscureText: _obscurePassword,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Informe a senha';
-                            }
-                            return null;
-                          },
-                          onFieldSubmitted: (_) => _submit(controller),
                         ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: controller.isLoading
-                                ? null
-                                : () => _submit(controller),
-                            child: controller.isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text('Entrar'),
-                          ),
+                        obscureText: _obscurePassword,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Informe a senha';
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) => _submit(controller),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: controller.isLoading
+                              ? null
+                              : () => _submit(controller),
+                          child: controller.isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text('Entrar'),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  if (showBiometricButton) ...[
-                    const SizedBox(height: 24),
-                    OutlinedButton.icon(
-                      onPressed: controller.isLoading
-                          ? null
-                          : controller.authenticateWithBiometrics,
-                      icon: const Icon(Icons.face_retouching_natural),
-                      label: const Text('Entrar com biometria / Face ID'),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          },
+                ),
+              );
+
+              if (showBiometricButton) {
+                widgets.addAll([
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: controller.isLoading
+                        ? null
+                        : controller.authenticateWithBiometrics,
+                    icon: const Icon(Icons.face_retouching_natural),
+                    label: const Text('Entrar com biometria / Face ID'),
+                  ),
+                ]);
+              }
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: widgets,
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

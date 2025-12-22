@@ -1,16 +1,20 @@
+import 'dart:developer' as developer;
+import 'dart:math' as math;
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/network/api_exception.dart';
 import '../../../../widgets/summary_card.dart';
 import '../../../auth/data/models/login_response.dart';
 import '../../../auth/presentation/controllers/auth_controller.dart';
+import '../../../dashboard/data/models/consolidated_report.dart';
+import '../../../dashboard/data/models/customer_overview.dart';
+import '../../../dashboard/data/repositories/customer_dashboard_repository.dart';
 import '../../data/models/alert.dart';
-import '../../data/models/alert_filters.dart';
-import '../../data/models/alert_list_result.dart';
 import '../../data/models/alert_summary.dart';
 import '../../domain/alert_enums.dart';
-import '../../data/repositories/alert_repository.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -20,29 +24,23 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  late Future<AlertSummary> _summaryFuture;
-  late Future<AlertListResult> _alertsFuture;
-  bool _initialized = false;
-  final AlertFilters _filters = const AlertFilters(pageSize: 20);
+  late Future<CustomerDashboardOverview> _overviewFuture;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      final repository = context.read<AlertRepository>();
-      _summaryFuture = repository.fetchSummary();
-      _alertsFuture = repository.fetchAlerts(filters: _filters);
-      _initialized = true;
-    }
+  void initState() {
+    super.initState();
+    _overviewFuture = _loadOverview();
+  }
+
+  Future<CustomerDashboardOverview> _loadOverview() {
+    return context.read<CustomerDashboardRepository>().fetchOverview();
   }
 
   Future<void> _refresh() async {
-    final repository = context.read<AlertRepository>();
     setState(() {
-      _summaryFuture = repository.fetchSummary();
-      _alertsFuture = repository.fetchAlerts(filters: _filters);
+      _overviewFuture = _loadOverview();
     });
-    await Future.wait([_summaryFuture, _alertsFuture]);
+    await _overviewFuture;
   }
 
   @override
@@ -51,387 +49,744 @@ class _DashboardPageState extends State<DashboardPage> {
     final user = auth.currentUser;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Alertas do CRM'),
-        actions: [
-          IconButton(
-            tooltip: 'Atualizar',
-            onPressed: () => _refresh(),
-            icon: const Icon(Icons.refresh),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: FutureBuilder<CustomerDashboardOverview>(
+            future: _overviewFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return ListView(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Não foi possível carregar seu painel.',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          Text('${snapshot.error}'),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: _refresh,
+                            child: const Text('Tentar novamente'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              final overview = snapshot.data!;
+              return ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _HeroHeader(
+                    user: user,
+                    consolidated: overview.consolidatedReport,
+                    onLogout: () => context.read<AuthController>().logout(),
+                  ),
+                  if (overview.consolidatedReport != null) ...[
+                    const SizedBox(height: 16),
+                    _ConsolidatedSection(report: overview.consolidatedReport!),
+                  ],
+                  const SizedBox(height: 16),
+                  _AlertHighlights(alerts: overview.recentAlerts),
+                  const SizedBox(height: 16),
+                  _AlertSummarySection(summary: overview.alertSummary),
+                  const SizedBox(height: 32),
+                ],
+              );
+            },
           ),
-          TextButton.icon(
-            onPressed: auth.isLoading ? null : auth.logout,
-            icon: const Icon(Icons.logout),
-            label: const Text('Sair'),
+        ),
+      ),
+    );
+  }
+}
+
+final NumberFormat _currencyFormatter = NumberFormat.simpleCurrency(locale: 'pt_BR');
+final NumberFormat _percentFormatter = NumberFormat.decimalPattern('pt_BR');
+
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({
+    required this.user,
+    required this.consolidated,
+    required this.onLogout,
+  });
+
+  final UserProfile? user;
+  final ConsolidatedReport? consolidated;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalApplied = consolidated?.totalApplied ?? 0;
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: const AssetImage('assets/images/fundo_logus.png'),
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.55), BlendMode.darken),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Image.asset(
+                'assets/images/logus_logo.png',
+                height: 48,
+                fit: BoxFit.contain,
+                color: Colors.white,
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onLogout,
+                icon: const Icon(Icons.logout),
+                color: Colors.white,
+                tooltip: 'Sair',
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Olá, ${user?.person.name ?? 'cliente Logus'}',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Acompanhe seus alertas e investimentos em um só lugar.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.white70,
+                ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.45),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Patrimônio sob gestão',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.white70,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _formatCurrency(totalApplied),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                if (consolidated?.currentYear.variationPercent != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Rentabilidade do ano: ${_formatPercent(consolidated!.currentYear.variationPercent)}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            if (user != null) _buildUserCard(context, user),
-            const SizedBox(height: 16),
-            FutureBuilder<AlertSummary>(
-              future: _summaryFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return _ErrorMessage(
-                    message: 'Não foi possível carregar os dados de resumo.',
-                    error: snapshot.error,
-                  );
-                }
-                final summary = snapshot.data!;
-                return _buildSummary(context, summary);
-              },
+    );
+  }
+}
+
+class _AlertHighlights extends StatelessWidget {
+  const _AlertHighlights({required this.alerts});
+
+  final List<Alert> alerts;
+
+  @override
+  Widget build(BuildContext context) {
+    if (alerts.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.verified, color: Colors.green),
+                const SizedBox(height: 8),
+                Text(
+                  'Tudo em ordem!',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                const Text('Nenhum alerta exige sua atenção neste momento.'),
+              ],
             ),
-            const SizedBox(height: 32),
-            Text(
-              'Alertas recentes',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            FutureBuilder<AlertListResult>(
-              future: _alertsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return _ErrorMessage(
-                    message: 'Não foi possível carregar os alertas.',
-                    error: snapshot.error,
-                  );
-                }
-                final result = snapshot.data!;
-                if (result.items.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text('Nenhum alerta encontrado.'),
-                  );
-                }
-                return Column(
-                  children: result.items.map((alert) {
-                    return _AlertCard(
-                      alert: alert,
-                      onResolve: () => _handleAction(
-                        () => context.read<AlertRepository>().resolveAlert(alert.id),
-                        successMessage: 'Alerta marcado como resolvido.',
-                      ),
-                      onIgnore: () => _handleAction(
-                        () => context.read<AlertRepository>().ignoreAlert(alert.id),
-                        successMessage: 'Alerta marcado como ignorado.',
-                      ),
-                      onSnooze: () => _handleSnooze(alert),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
+          ),
         ),
+      );
+    }
+
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (context, index) {
+          final alert = alerts[index];
+          return SizedBox(
+            width: 260,
+            child: Card(
+              color: _alertCardColor(alert.type, context),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      _alertIcon(alert.type),
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _alertHeadline(alert),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      alert.description ?? 'Acesse para verificar os detalhes.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemCount: alerts.length.clamp(0, 10),
       ),
     );
   }
+}
 
-  Widget _buildUserCard(BuildContext context, UserProfile user) {
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: ListTile(
-        title: Text(
-          user.person.name,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          '${user.email}\nPerfil: ${user.profile.name}',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-        ),
-      ),
-    );
-  }
+class _AlertSummarySection extends StatelessWidget {
+  const _AlertSummarySection({required this.summary});
 
-  Widget _buildSummary(BuildContext context, AlertSummary summary) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            SizedBox(
-              width: _cardWidth(context),
-              child: SummaryCard(
-                title: 'Alertas ativos',
+  final AlertSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Resumo dos seus alertas',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              SummaryCard(
+                title: 'Ativos',
                 value: summary.totalActive.toString(),
                 icon: Icons.notifications_active_outlined,
               ),
-            ),
-            SizedBox(
-              width: _cardWidth(context),
-              child: SummaryCard(
+              SummaryCard(
                 title: 'Críticos',
                 value: summary.critical.toString(),
                 icon: Icons.warning_amber_rounded,
               ),
-            ),
-            SizedBox(
-              width: _cardWidth(context),
-              child: SummaryCard(
+              SummaryCard(
                 title: 'Vencidos +7 dias',
                 value: summary.overdueSevenDays.toString(),
                 icon: Icons.schedule,
               ),
-            ),
-            SizedBox(
-              width: _cardWidth(context),
-              child: SummaryCard(
+              SummaryCard(
                 title: 'Próximos 7 dias',
                 value: summary.nextSevenDays.toString(),
                 icon: Icons.calendar_today_outlined,
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Alertas por tipo',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: summary.byType.entries
-              .map(
-                (entry) => Chip(
-                  avatar: const Icon(Icons.category_outlined, size: 16),
-                  label: Text('${entry.key.label}: ${entry.value}'),
-                ),
-              )
-              .toList(),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Alertas por status',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: summary.byStatus.entries
-              .map(
-                (entry) => Chip(
-                  avatar: const Icon(Icons.flag_outlined, size: 16),
-                  label: Text('${entry.key.label}: ${entry.value}'),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _handleAction(
-    Future<dynamic> Function() request, {
-    required String successMessage,
-  }) async {
-    try {
-      await request();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(successMessage)),
-      );
-      await _refresh();
-    } catch (error) {
-      if (!mounted) return;
-      final message =
-          error is ApiException ? error.message : error.toString();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
-  }
-
-  Future<void> _handleSnooze(Alert alert) async {
-    final days = await _pickSnoozeDays();
-    if (days == null) return;
-    await _handleAction(
-      () => context.read<AlertRepository>().snoozeAlert(
-            alert.id,
-            days: days,
+            ],
           ),
-      successMessage: 'Alerta adiado por $days dias.',
-    );
-  }
-
-  Future<int?> _pickSnoozeDays() {
-    return showDialog<int>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Adiar alerta'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(context).pop(7),
-            child: const Text('7 dias'),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(context).pop(30),
-            child: const Text('30 dias'),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  double _cardWidth(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 600) {
-      return (width - 16 * 2 - 12) / 2;
-    }
-    return width - 32;
-  }
-}
-
-class _AlertCard extends StatelessWidget {
-  const _AlertCard({
-    required this.alert,
-    required this.onResolve,
-    required this.onIgnore,
-    required this.onSnooze,
-  });
-
-  final Alert alert;
-  final VoidCallback onResolve;
-  final VoidCallback onIgnore;
-  final VoidCallback onSnooze;
-
-  String _formatDate(DateTime date) {
-    final d = date.toLocal();
-    final day = d.day.toString().padLeft(2, '0');
-    final month = d.month.toString().padLeft(2, '0');
-    return '$day/$month/${d.year}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    alert.title,
-                    style: Theme.of(context).textTheme.titleMedium,
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: summary.byStatus.entries
+                .map(
+                  (entry) => Chip(
+                    avatar: const Icon(Icons.circle, size: 12),
+                    label: Text('${entry.key.label}: ${entry.value}'),
                   ),
-                ),
-                Chip(
-                  label: Text(alert.status.label),
-                  backgroundColor: _statusColor(alert.status, context),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConsolidatedSection extends StatelessWidget {
+  const _ConsolidatedSection({required this.report});
+
+  final ConsolidatedReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Performance consolidada',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                report.portfolio,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Saldo total'),
+                        const SizedBox(height: 4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _formatCurrency(report.totalApplied),
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Retorno 12 meses'),
+                        const SizedBox(height: 4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _formatPercent(report.lastTwelveMonthsReturn ?? report.currentYear.variationPercent),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: Colors.green[700],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _PerformanceChart(report: report),
+              if (report.monthClosed != null) ...[
+                const SizedBox(height: 16),
+                _MonthlyComparison(
+                  current: report.currentMonth,
+                  previous: report.monthClosed!,
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              alert.description ?? 'Sem descrição',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Text('Cliente: ${alert.clientName}'),
-            Text('Tipo: ${alert.type.label} • Severidade: ${alert.severity.label}'),
-            Text('Referência: ${_formatDate(alert.referenceDate)}'),
-            if (alert.daysFromReference != null)
-              Text('Dias da referência: ${alert.daysFromReference}'),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  onPressed: onResolve,
-                  icon: const Icon(Icons.check),
-                  label: const Text('Resolver'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onIgnore,
-                  icon: const Icon(Icons.remove_done),
-                  label: const Text('Ignorar'),
-                ),
-                TextButton.icon(
-                  onPressed: onSnooze,
-                  icon: const Icon(Icons.snooze),
-                  label: const Text('Adiar'),
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _MetricChip(
+                    label: 'Volatilidade 90 dias',
+                    value: report.volatility90Days == null
+                        ? '--'
+                        : '${report.volatility90Days!.toStringAsFixed(2)}%',
+                  ),
+                  _MetricChip(
+                    label: 'Índice Sharpe CDI',
+                    value: report.sharpeIndex == null ? '--' : report.sharpeIndex!.toStringAsFixed(2),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Color? _statusColor(AlertStatus status, BuildContext context) {
-    final theme = Theme.of(context);
-    switch (status) {
-      case AlertStatus.pending:
-        return theme.colorScheme.secondaryContainer;
-      case AlertStatus.inProgress:
-        return theme.colorScheme.tertiaryContainer;
-      case AlertStatus.resolved:
-        return theme.colorScheme.primaryContainer;
-      case AlertStatus.snoozed:
-        return theme.colorScheme.surfaceContainerHighest;
-      case AlertStatus.ignored:
-        return theme.colorScheme.errorContainer;
+class _PerformanceChart extends StatelessWidget {
+  const _PerformanceChart({required this.report});
+
+  final ConsolidatedReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final points = [
+        _PerformancePoint(
+          label: 'Mês',
+          value: report.currentMonth.variationPercent,
+          comparison: report.monthClosed?.variationPercent,
+          comparisonLabel: report.monthClosed != null ? 'Mês anterior' : null,
+          benchmark: report.currentMonth.benchmark,
+        ),
+        _PerformancePoint(
+          label: 'Ano',
+          value: report.currentYear.variationPercent,
+          benchmark: report.currentYear.benchmark,
+        ),
+        _PerformancePoint(
+          label: '12 meses',
+          value: report.lastTwelveMonthsReturn ?? 0,
+          benchmark: null,
+        ),
+      ];
+
+      final theme = Theme.of(context);
+      final rodMatrix = <List<_RodInfo>>[];
+      final allValues = <double>[];
+
+      final barGroups = List.generate(points.length, (index) {
+        final point = points[index];
+        final rods = point.buildRods(theme);
+        rodMatrix.add(rods);
+        allValues.addAll(rods.map((r) => r.value));
+        return BarChartGroupData(
+          x: index,
+          barsSpace: 10,
+          barRods: rods
+              .map(
+                (rod) => BarChartRodData(
+                  toY: rod.value,
+                  borderRadius: BorderRadius.circular(6),
+                  width: 14,
+                  color: rod.color,
+                ),
+              )
+              .toList(),
+        );
+      });
+
+      final minY = math.min(0, allValues.reduce(math.min)) - 0.5;
+      final maxY = math.max(0, allValues.reduce(math.max)) + 0.5;
+
+      return SizedBox(
+        height: 220,
+        child: BarChart(
+          BarChartData(
+            minY: minY,
+            maxY: maxY,
+            barTouchData: BarTouchData(
+              enabled: true,
+              touchTooltipData: BarTouchTooltipData(
+                tooltipPadding: const EdgeInsets.all(10),
+                tooltipRoundedRadius: 8,
+                getTooltipColor: (group) => Colors.black87,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  final point = points[group.x.toInt()];
+                  final rodInfo = rodMatrix[groupIndex][rodIndex];
+                  return BarTooltipItem(
+                    '${point.label} • ${rodInfo.label}\n${_formatPercent(rodInfo.value)}',
+                    const TextStyle(color: Colors.white),
+                  );
+                },
+              ),
+            ),
+            gridData: const FlGridData(show: false),
+            titlesData: FlTitlesData(
+              leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, _) {
+                    final index = value.toInt();
+                    if (index < 0 || index >= points.length) return const SizedBox();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(points[index].label),
+                    );
+                  },
+                ),
+              ),
+            ),
+          borderData: FlBorderData(show: false),
+          barGroups: barGroups,
+        ),
+      ),
+    );
+    } catch (error, stackTrace) {
+      developer.log(
+        'Erro ao montar gráfico de performance',
+        name: 'Dashboard',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(
+          'Não foi possível renderizar o gráfico de performance.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
     }
   }
 }
 
-class _ErrorMessage extends StatelessWidget {
-  const _ErrorMessage({
-    required this.message,
-    this.error,
-  });
+class _MetricChip extends StatelessWidget {
+  const _MetricChip({required this.label, required this.value});
 
-  final String message;
-  final Object? error;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(Icons.error_outline, size: 32),
-        const SizedBox(height: 8),
-        Text(
-          message,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        if (error != null) ...[
-          const SizedBox(height: 8),
-          Text('$error'),
+    return Chip(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      label: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
         ],
-      ],
+      ),
     );
   }
+}
+
+class _MonthlyComparison extends StatelessWidget {
+  const _MonthlyComparison({
+    required this.current,
+    required this.previous,
+  });
+
+  final ConsolidatedSection current;
+  final ConsolidatedSection previous;
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = current.variationPercent - previous.variationPercent;
+    final deltaColor = delta >= 0 ? Colors.green[700] : Colors.red[600];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Comparativo mensal',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _MonthlyBlock(label: 'Mês atual', section: current)),
+              const SizedBox(width: 12),
+              Expanded(child: _MonthlyBlock(label: 'Mês anterior', section: previous)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Variação vs mês anterior: ${_formatSignedPercent(delta)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: deltaColor, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthlyBlock extends StatelessWidget {
+  const _MonthlyBlock({required this.label, required this.section});
+
+  final String label;
+  final ConsolidatedSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 8),
+          Text(
+            _formatPercent(section.variationPercent),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _formatCurrency(section.income),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PerformancePoint {
+  _PerformancePoint({
+    required this.label,
+    required this.value,
+    this.comparison,
+    this.comparisonLabel,
+    this.benchmark,
+  });
+
+  final String label;
+  final double value;
+  final double? comparison;
+  final String? comparisonLabel;
+  final double? benchmark;
+
+  List<_RodInfo> buildRods(ThemeData theme) {
+    final rods = <_RodInfo>[
+      _RodInfo(
+        label: 'Você',
+        value: value,
+        color: theme.colorScheme.primary,
+      ),
+    ];
+    if (comparison != null) {
+      rods.add(
+        _RodInfo(
+          label: comparisonLabel ?? 'Comparativo',
+          value: comparison!,
+          color: theme.colorScheme.tertiary,
+        ),
+      );
+    }
+    if (benchmark != null) {
+      rods.add(
+        _RodInfo(
+          label: 'Benchmark',
+          value: benchmark!,
+          color: theme.colorScheme.secondary,
+        ),
+      );
+    }
+    return rods;
+  }
+}
+
+class _RodInfo {
+  _RodInfo({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final double value;
+  final Color color;
+}
+
+Color _alertCardColor(AlertType type, BuildContext context) {
+  switch (type) {
+    case AlertType.procuracaoVencida:
+      return Colors.red.shade50;
+    case AlertType.suitabilityVencido:
+      return Colors.orange.shade50;
+    case AlertType.aniversario:
+      return Colors.lightBlue.shade50;
+    case AlertType.outro:
+      return Theme.of(context).colorScheme.surfaceContainerHighest;
+  }
+}
+
+IconData _alertIcon(AlertType type) {
+  switch (type) {
+    case AlertType.procuracaoVencida:
+      return Icons.gavel_outlined;
+    case AlertType.suitabilityVencido:
+      return Icons.verified_user_outlined;
+    case AlertType.aniversario:
+      return Icons.cake_outlined;
+    case AlertType.outro:
+      return Icons.notifications_outlined;
+  }
+}
+
+String _alertHeadline(Alert alert) {
+  switch (alert.type) {
+    case AlertType.procuracaoVencida:
+      return 'Sua procuração precisa ser renovada.';
+    case AlertType.suitabilityVencido:
+      return 'Revisite seu perfil de investidor.';
+    case AlertType.aniversario:
+      return 'Parabéns! Hoje é dia especial.';
+    case AlertType.outro:
+      return alert.title.isNotEmpty ? alert.title : 'Alerta importante do CRM.';
+  }
+}
+
+String _formatCurrency(double value) {
+  return _currencyFormatter.format(value);
+}
+
+String _formatPercent(double value) {
+  return '${_percentFormatter.format(value)}%';
+}
+
+String _formatSignedPercent(double value) {
+  final formatted = _percentFormatter.format(value.abs());
+  final sign = value >= 0 ? '+' : '-';
+  return '$sign$formatted%';
 }
