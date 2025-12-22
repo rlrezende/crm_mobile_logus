@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import 'api_exception.dart';
 
@@ -22,7 +23,7 @@ class ApiClient {
         LogInterceptor(
           requestBody: true,
           responseBody: true,
-          logPrint: (obj) => _networkLogs.add(obj.toString()),
+          logPrint: _handleLog,
         ),
       );
     }
@@ -32,6 +33,12 @@ class ApiClient {
   final String baseUrl;
   final bool logNetworkTraffic;
   final List<String> _networkLogs = [];
+
+  void _handleLog(Object obj) {
+    final message = obj.toString();
+    _networkLogs.add(message);
+    debugPrint('[API] $message'); // Mostra no Logcat/console quando habilitado
+  }
 
   List<String> drainLogs() {
     final copy = List<String>.from(_networkLogs);
@@ -47,19 +54,47 @@ class ApiClient {
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
-  Future<Map<String, dynamic>> getJson(
+  Future<dynamic> _getRaw(
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>(
+      final response = await _dio.get<dynamic>(
         path,
         queryParameters: queryParameters,
       );
-      return response.data ?? <String, dynamic>{};
+      return response.data;
     } on DioException catch (error) {
       throw _mapError(error);
     }
+  }
+
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final data = await _getRaw(path, queryParameters: queryParameters);
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    return <String, dynamic>{};
+  }
+
+  Future<List<dynamic>> getJsonList(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final data = await _getRaw(path, queryParameters: queryParameters);
+    if (data is List<dynamic>) {
+      return data;
+    }
+    if (data is Map<String, dynamic>) {
+      final values = data[r'$values'];
+      if (values is List<dynamic>) {
+        return values;
+      }
+    }
+    return const [];
   }
 
   Future<Map<String, dynamic>> postJson(
@@ -74,6 +109,39 @@ class ApiClient {
         queryParameters: queryParameters,
       );
       return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _mapError(error);
+    }
+  }
+
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Object? data,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+      );
+      return response.data ?? <String, dynamic>{};
+    } on DioException catch (error) {
+      throw _mapError(error);
+    }
+  }
+
+  Future<void> putJson(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Object? data,
+  }) async {
+    try {
+      await _dio.put<void>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+      );
     } on DioException catch (error) {
       throw _mapError(error);
     }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class AppConfig {
   const AppConfig({
     required this.apiBaseUrl,
@@ -9,7 +11,10 @@ class AppConfig {
       'API_BASE_URL',
       defaultValue: 'https://crmapi.loguscapital.com:446/api',
     );
-    const logNetworkTraffic = bool.fromEnvironment('LOG_NETWORK', defaultValue: false);
+    const logNetworkTraffic = bool.fromEnvironment(
+      'LOG_NETWORK',
+      defaultValue: !kReleaseMode,
+    );
 
     return const AppConfig(
       apiBaseUrl: apiBaseUrl,

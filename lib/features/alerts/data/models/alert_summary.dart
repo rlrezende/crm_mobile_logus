@@ -1,3 +1,6 @@
+import '../../../../core/utils/json_utils.dart';
+import '../../domain/alert_enums.dart';
+
 class AlertSummary {
   AlertSummary({
     required this.totalActive,
@@ -12,27 +15,45 @@ class AlertSummary {
   final int critical;
   final int overdueSevenDays;
   final int nextSevenDays;
-  final Map<String, int> byType;
-  final Map<String, int> byStatus;
+  final Map<AlertType, int> byType;
+  final Map<AlertStatus, int> byStatus;
 
   factory AlertSummary.fromJson(Map<String, dynamic> json) {
-    Map<String, int> mapFromJson(dynamic value) {
-      if (value is Map<String, dynamic>) {
-        return value.map(
-          (key, count) => MapEntry(key, (count as num).toInt()),
-        );
-      }
-      return {};
-    }
-
     return AlertSummary(
-      totalActive: (json['totalAtivos'] as num?)?.toInt() ?? 0,
-      critical: (json['criticos'] as num?)?.toInt() ?? 0,
-      overdueSevenDays:
-          (json['vencidosHaMaisDeSeteDias'] as num?)?.toInt() ?? 0,
-      nextSevenDays: (json['proximosSeteDias'] as num?)?.toInt() ?? 0,
-      byType: mapFromJson(json['alertasPorTipo']),
-      byStatus: mapFromJson(json['alertasPorStatus']),
+      totalActive: (json['totalAtivos'] as num?)?.toInt() ??
+          (json['TotalAtivos'] as num?)?.toInt() ??
+          0,
+      critical: (json['criticos'] as num?)?.toInt() ??
+          (json['Criticos'] as num?)?.toInt() ??
+          0,
+      overdueSevenDays: (json['vencidosHaMaisDeSeteDias'] as num?)?.toInt() ??
+          (json['VencidosHaMaisDeSeteDias'] as num?)?.toInt() ??
+          0,
+      nextSevenDays: (json['proximosSeteDias'] as num?)?.toInt() ??
+          (json['ProximosSeteDias'] as num?)?.toInt() ??
+          0,
+      byType: decodeEnumCounts(
+        json['alertasPorTipo'] ?? json['AlertasPorTipo'],
+        AlertType.values.asValueMap(),
+      ),
+      byStatus: decodeEnumCounts(
+        json['alertasPorStatus'] ?? json['AlertasPorStatus'],
+        AlertStatus.values.asValueMap(),
+      ),
     );
+  }
+}
+
+extension _EnumListMapper<T extends Enum> on List<T> {
+  Map<String, T> asValueMap() {
+    final map = <String, T>{};
+    for (final entry in this) {
+      if (entry is AlertType) {
+        map[entry.apiValue] = entry;
+      } else if (entry is AlertStatus) {
+        map[entry.apiValue] = entry;
+      }
+    }
+    return map;
   }
 }

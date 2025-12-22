@@ -102,7 +102,7 @@ class PerfilProfile {
   final List<ModuloProfile> modules;
 
   factory PerfilProfile.fromJson(Map<String, dynamic> json) {
-    final modulesJson = json['modulos'] as List<dynamic>? ?? [];
+    final modulesJson = _readList(json['modulos']);
     return PerfilProfile(
       id: json['id'] as String,
       name: json['nome'] as String,
@@ -119,6 +119,19 @@ class PerfilProfile {
         'descricao': description,
         'modulos': modules.map((module) => module.toJson()).toList(),
       };
+}
+
+List<dynamic> _readList(dynamic value) {
+  if (value is List<dynamic>) {
+    return value;
+  }
+  if (value is Map<String, dynamic>) {
+    final maybeValues = value[r'$values'];
+    if (maybeValues is List<dynamic>) {
+      return maybeValues;
+    }
+  }
+  return const [];
 }
 
 class ModuloProfile {
