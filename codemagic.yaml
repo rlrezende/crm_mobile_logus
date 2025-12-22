@@ -17,11 +17,9 @@ workflows:
           export FLUTTER_HOME=/tmp/flutter_3_24
           export FLUTTER_BIN=$FLUTTER_HOME/bin/flutter
           export PATH=$FLUTTER_HOME/bin:$PATH
-          {
-            echo 'export FLUTTER_HOME=/tmp/flutter_3_24'
-            echo 'export FLUTTER_BIN=/tmp/flutter_3_24/bin/flutter'
-            echo 'export PATH=/tmp/flutter_3_24/bin:$PATH'
-          } >> $CM_ENV
+          envman add --key FLUTTER_HOME --value $FLUTTER_HOME
+          envman add --key FLUTTER_BIN --value $FLUTTER_BIN
+          envman add --key PATH --value $PATH
           $FLUTTER_BIN --version
       - name: Install dependencies
         script: |
