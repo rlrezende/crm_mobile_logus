@@ -9,6 +9,11 @@ workflows:
         API_BASE_URL: https://crm.loguscapital.com/api
         LOG_NETWORK: "false"
     scripts:
+      - name: Setup Flutter 3.24.0
+        script: |
+          git clone --branch 3.24.0 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_24
+          echo 'export PATH=/tmp/flutter_3_24/bin:$PATH' >> $CM_ENV
+          /tmp/flutter_3_24/bin/flutter --version
       - name: Install dependencies
         script: |
           flutter pub get
