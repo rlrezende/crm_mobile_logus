@@ -15,12 +15,12 @@ workflows:
         script: |
           git clone --branch 3.24.0 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_24
           /tmp/flutter_3_24/bin/flutter --version
-      - name: Ensure Android SDK 34
+      - name: Ensure Android SDK/NDK
         script: |
           export ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-$ANDROID_HOME}
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
           yes | sdkmanager --licenses >/dev/null || true
-          yes | sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;26.1.10909125"
       - name: Install dependencies
         script: |
           export PATH=/tmp/flutter_3_24/bin:$PATH
