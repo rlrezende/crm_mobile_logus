@@ -12,6 +12,8 @@ import '../../../auth/presentation/controllers/auth_controller.dart';
 import '../../../dashboard/data/models/consolidated_report.dart';
 import '../../../dashboard/data/models/customer_overview.dart';
 import '../../../dashboard/data/repositories/customer_dashboard_repository.dart';
+import '../../../suitability/presentation/controllers/suitability_controller.dart';
+import '../../../suitability/presentation/pages/suitability_questionnaire_page.dart';
 import '../../data/models/alert.dart';
 import '../../data/models/alert_summary.dart';
 import '../../domain/alert_enums.dart';
@@ -30,6 +32,10 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _overviewFuture = _loadOverview();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<SuitabilityController>().ensureStatusLoaded();
+    });
   }
 
   Future<CustomerDashboardOverview> _loadOverview() {
@@ -95,12 +101,60 @@ class _DashboardPageState extends State<DashboardPage> {
                     consolidated: overview.consolidatedReport,
                     onLogout: () => context.read<AuthController>().logout(),
                   ),
+                  Consumer<SuitabilityController>(
+                    builder: (context, controller, _) {
+                      if (controller.isStatusLoading && controller.status == null) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: LinearProgressIndicator(),
+                        );
+                      }
+
+                      final status = controller.status;
+                      final needsRenewal = status == null || status.needsRenewal;
+                      if (!needsRenewal) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Revisão de Suitability necessária',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Por motivos regulatórios, precisamos que você responda novamente ao questionário de suitability.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: 12),
+                                FilledButton.icon(
+                                  onPressed: _openSuitabilityQuestionnaire,
+                                  icon: const Icon(Icons.fact_check_outlined),
+                                  label: const Text('Responder agora'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   if (overview.consolidatedReport != null) ...[
                     const SizedBox(height: 16),
                     _ConsolidatedSection(report: overview.consolidatedReport!),
                   ],
                   const SizedBox(height: 16),
-                  _AlertHighlights(alerts: overview.recentAlerts),
+                  _AlertHighlights(
+                    alerts: overview.recentAlerts,
+                    onSuitabilityAction: _openSuitabilityQuestionnaire,
+                  ),
                   const SizedBox(height: 16),
                   _AlertSummarySection(summary: overview.alertSummary),
                   const SizedBox(height: 32),
@@ -111,6 +165,16 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _openSuitabilityQuestionnaire() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SuitabilityQuestionnairePage()),
+    );
+    if (!mounted) {
+      return;
+    }
+    await context.read<SuitabilityController>().refreshStatus();
   }
 }
 
@@ -216,9 +280,10 @@ class _HeroHeader extends StatelessWidget {
 }
 
 class _AlertHighlights extends StatelessWidget {
-  const _AlertHighlights({required this.alerts});
+  const _AlertHighlights({required this.alerts, required this.onSuitabilityAction});
 
   final List<Alert> alerts;
+  final VoidCallback onSuitabilityAction;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +312,7 @@ class _AlertHighlights extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 160,
+      height: 200,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
@@ -279,6 +344,16 @@ class _AlertHighlights extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (alert.type == AlertType.suitabilityVencido) ...[
+                      const Spacer(),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: onSuitabilityAction,
+                          child: const Text('Atualizar suitability'),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

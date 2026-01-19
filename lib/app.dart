@@ -11,6 +11,8 @@ import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/presentation/controllers/auth_controller.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/dashboard/data/repositories/customer_dashboard_repository.dart';
+import 'features/suitability/data/repositories/suitability_repository.dart';
+import 'features/suitability/presentation/controllers/suitability_controller.dart';
 
 class LogusCrmApp extends StatelessWidget {
   const LogusCrmApp({
@@ -38,6 +40,9 @@ class LogusCrmApp extends StatelessWidget {
         Provider.value(value: apiClient),
         Provider.value(value: alertRepository),
         Provider(
+          create: (_) => SuitabilityRepository(apiClient: apiClient),
+        ),
+        Provider(
           create: (_) => CustomerDashboardRepository(apiClient: apiClient),
         ),
         Provider.value(value: tokenStorage),
@@ -47,6 +52,11 @@ class LogusCrmApp extends StatelessWidget {
             tokenStorage: tokenStorage,
             biometricAuthService: biometricAuthService,
             apiClient: apiClient,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => SuitabilityController(
+            repository: context.read<SuitabilityRepository>(),
           ),
         ),
       ],
