@@ -20,21 +20,19 @@ class InvestmentDashboardData {
   final ContributionSeries contributions;
 
   factory InvestmentDashboardData.fromJson(Map<String, dynamic> json) {
-    final classesJson = json['classes'] as List<dynamic>? ?? const [];
+    final classesJson = _readList(json['classes']);
     return InvestmentDashboardData(
       benchmark: (json['benchmark'] as String?) ?? 'CDI',
       asOf: _parseDate(json['asOf']),
       portfolio: (json['portfolio'] as String?) ?? '',
       totalValue: _toDoubleNullable(json['totalValue']),
-      returns: InvestmentReturns.fromJson((json['returns'] as Map?)?.cast<String, dynamic>() ?? const {}),
+      returns: InvestmentReturns.fromJson(_readMap(json['returns'])),
       volatility90Days: _toDoubleNullable(json['volatility90Days']),
       classes: classesJson
           .whereType<Map>()
           .map((item) => InvestmentClass.fromJson(item.cast<String, dynamic>()))
           .toList(),
-      contributions: ContributionSeries.fromJson(
-        (json['contributions'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
+      contributions: ContributionSeries.fromJson(_readMap(json['contributions'])),
     );
   }
 }
@@ -54,14 +52,10 @@ class InvestmentReturns {
 
   factory InvestmentReturns.fromJson(Map<String, dynamic> json) {
     return InvestmentReturns(
-      month: ReturnMetric.fromJson((json['month'] as Map?)?.cast<String, dynamic>() ?? const {}),
-      ytd: ReturnMetric.fromJson((json['ytd'] as Map?)?.cast<String, dynamic>() ?? const {}),
-      twelveMonths: ReturnMetric.fromJson(
-        (json['twelveMonths'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
-      sinceInception: ReturnMetric.fromJson(
-        (json['sinceInception'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
+      month: ReturnMetric.fromJson(_readMap(json['month'])),
+      ytd: ReturnMetric.fromJson(_readMap(json['ytd'])),
+      twelveMonths: ReturnMetric.fromJson(_readMap(json['twelveMonths'])),
+      sinceInception: ReturnMetric.fromJson(_readMap(json['sinceInception'])),
     );
   }
 }
@@ -111,7 +105,7 @@ class InvestmentClass {
   final List<InvestmentAsset> assets;
 
   factory InvestmentClass.fromJson(Map<String, dynamic> json) {
-    final assetsJson = json['assets'] as List<dynamic>? ?? const [];
+    final assetsJson = _readList(json['assets']);
     return InvestmentClass(
       name: (json['name'] as String?) ?? 'Classe',
       value: _toDoubleNullable(json['value']),
@@ -171,8 +165,8 @@ class ContributionSeries {
   final List<WaterfallPoint> ytd;
 
   factory ContributionSeries.fromJson(Map<String, dynamic> json) {
-    final monthJson = json['month'] as List<dynamic>? ?? const [];
-    final ytdJson = json['ytd'] as List<dynamic>? ?? const [];
+    final monthJson = _readList(json['month']);
+    final ytdJson = _readList(json['ytd']);
     return ContributionSeries(
       monthTotal: _toDoubleNullable(json['monthTotal']),
       ytdTotal: _toDoubleNullable(json['ytdTotal']),
@@ -239,4 +233,35 @@ DateTime? _parseDate(dynamic value) {
     return DateTime.tryParse(value);
   }
   return null;
+}
+
+Map<String, dynamic> _readMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    return value.map((key, mapValue) => MapEntry('$key', mapValue));
+  }
+  return const {};
+}
+
+List<dynamic> _readList(dynamic value) {
+  if (value == null) {
+    return const [];
+  }
+  if (value is List<dynamic>) {
+    return value;
+  }
+  final map = _readMap(value);
+  if (map.isNotEmpty) {
+    final values = map[r'$values'];
+    if (values != null) {
+      return _readList(values);
+    }
+    final items = map['items'] ?? map['itemsDto'];
+    if (items != null) {
+      return _readList(items);
+    }
+  }
+  return const [];
 }
