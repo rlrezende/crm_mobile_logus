@@ -20,19 +20,19 @@ class InvestmentDashboardData {
   final ContributionSeries contributions;
 
   factory InvestmentDashboardData.fromJson(Map<String, dynamic> json) {
-    final classesJson = _readList(json['classes']);
+    final classesJson = _readList(_readValue(json, 'classes'));
     return InvestmentDashboardData(
-      benchmark: (json['benchmark'] as String?) ?? 'CDI',
-      asOf: _parseDate(json['asOf']),
-      portfolio: (json['portfolio'] as String?) ?? '',
-      totalValue: _toDoubleNullable(json['totalValue']),
-      returns: InvestmentReturns.fromJson(_readMap(json['returns'])),
-      volatility90Days: _toDoubleNullable(json['volatility90Days']),
+      benchmark: (_readValue(json, 'benchmark') as String?) ?? 'CDI',
+      asOf: _parseDate(_readValue(json, 'asOf')),
+      portfolio: (_readValue(json, 'portfolio') as String?) ?? '',
+      totalValue: _toDoubleNullable(_readValue(json, 'totalValue')),
+      returns: InvestmentReturns.fromJson(_readMap(_readValue(json, 'returns'))),
+      volatility90Days: _toDoubleNullable(_readValue(json, 'volatility90Days')),
       classes: classesJson
           .whereType<Map>()
           .map((item) => InvestmentClass.fromJson(item.cast<String, dynamic>()))
           .toList(),
-      contributions: ContributionSeries.fromJson(_readMap(json['contributions'])),
+      contributions: ContributionSeries.fromJson(_readMap(_readValue(json, 'contributions'))),
     );
   }
 }
@@ -52,10 +52,10 @@ class InvestmentReturns {
 
   factory InvestmentReturns.fromJson(Map<String, dynamic> json) {
     return InvestmentReturns(
-      month: ReturnMetric.fromJson(_readMap(json['month'])),
-      ytd: ReturnMetric.fromJson(_readMap(json['ytd'])),
-      twelveMonths: ReturnMetric.fromJson(_readMap(json['twelveMonths'])),
-      sinceInception: ReturnMetric.fromJson(_readMap(json['sinceInception'])),
+      month: ReturnMetric.fromJson(_readMap(_readValue(json, 'month'))),
+      ytd: ReturnMetric.fromJson(_readMap(_readValue(json, 'ytd'))),
+      twelveMonths: ReturnMetric.fromJson(_readMap(_readValue(json, 'twelveMonths'))),
+      sinceInception: ReturnMetric.fromJson(_readMap(_readValue(json, 'sinceInception'))),
     );
   }
 }
@@ -75,10 +75,10 @@ class ReturnMetric {
 
   factory ReturnMetric.fromJson(Map<String, dynamic> json) {
     return ReturnMetric(
-      available: (json['available'] as bool?) ?? true,
-      value: _toDoubleNullable(json['value']),
-      percent: _toDoubleNullable(json['percent']),
-      benchmark: _toDoubleNullable(json['benchmark']),
+      available: (_readValue(json, 'available') as bool?) ?? true,
+      value: _toDoubleNullable(_readValue(json, 'value')),
+      percent: _toDoubleNullable(_readValue(json, 'percent')),
+      benchmark: _toDoubleNullable(_readValue(json, 'benchmark')),
     );
   }
 }
@@ -105,15 +105,15 @@ class InvestmentClass {
   final List<InvestmentAsset> assets;
 
   factory InvestmentClass.fromJson(Map<String, dynamic> json) {
-    final assetsJson = _readList(json['assets']);
+    final assetsJson = _readList(_readValue(json, 'assets'));
     return InvestmentClass(
-      name: (json['name'] as String?) ?? 'Classe',
-      value: _toDoubleNullable(json['value']),
-      percent: _toDoubleNullable(json['percent']),
-      monthContribution: _toDoubleNullable(json['monthContribution']),
-      ytdContribution: _toDoubleNullable(json['ytdContribution']),
-      monthReturnPercent: _toDoubleNullable(json['monthReturnPercent']),
-      ytdReturnPercent: _toDoubleNullable(json['ytdReturnPercent']),
+      name: (_readValue(json, 'name') as String?) ?? 'Classe',
+      value: _toDoubleNullable(_readValue(json, 'value')),
+      percent: _toDoubleNullable(_readValue(json, 'percent')),
+      monthContribution: _toDoubleNullable(_readValue(json, 'monthContribution')),
+      ytdContribution: _toDoubleNullable(_readValue(json, 'ytdContribution')),
+      monthReturnPercent: _toDoubleNullable(_readValue(json, 'monthReturnPercent')),
+      ytdReturnPercent: _toDoubleNullable(_readValue(json, 'ytdReturnPercent')),
       assets: assetsJson
           .whereType<Map>()
           .map((item) => InvestmentAsset.fromJson(item.cast<String, dynamic>()))
@@ -141,12 +141,12 @@ class InvestmentAsset {
 
   factory InvestmentAsset.fromJson(Map<String, dynamic> json) {
     return InvestmentAsset(
-      name: (json['name'] as String?) ?? 'Ativo',
-      value: _toDoubleNullable(json['value']),
-      portfolioPercent: _toDoubleNullable(json['portfolioPercent']),
-      monthReturnPercent: _toDoubleNullable(json['monthReturnPercent']),
-      ytdReturnPercent: _toDoubleNullable(json['ytdReturnPercent']),
-      liquidity: json['liquidity'] as String?,
+      name: (_readValue(json, 'name') as String?) ?? 'Ativo',
+      value: _toDoubleNullable(_readValue(json, 'value')),
+      portfolioPercent: _toDoubleNullable(_readValue(json, 'portfolioPercent')),
+      monthReturnPercent: _toDoubleNullable(_readValue(json, 'monthReturnPercent')),
+      ytdReturnPercent: _toDoubleNullable(_readValue(json, 'ytdReturnPercent')),
+      liquidity: _readValue(json, 'liquidity') as String?,
     );
   }
 }
@@ -165,11 +165,11 @@ class ContributionSeries {
   final List<WaterfallPoint> ytd;
 
   factory ContributionSeries.fromJson(Map<String, dynamic> json) {
-    final monthJson = _readList(json['month']);
-    final ytdJson = _readList(json['ytd']);
+    final monthJson = _readList(_readValue(json, 'month'));
+    final ytdJson = _readList(_readValue(json, 'ytd'));
     return ContributionSeries(
-      monthTotal: _toDoubleNullable(json['monthTotal']),
-      ytdTotal: _toDoubleNullable(json['ytdTotal']),
+      monthTotal: _toDoubleNullable(_readValue(json, 'monthTotal')),
+      ytdTotal: _toDoubleNullable(_readValue(json, 'ytdTotal')),
       month: monthJson
           .whereType<Map>()
           .map((item) => WaterfallPoint.fromJson(item.cast<String, dynamic>()))
@@ -199,11 +199,11 @@ class WaterfallPoint {
 
   factory WaterfallPoint.fromJson(Map<String, dynamic> json) {
     return WaterfallPoint(
-      name: (json['name'] as String?) ?? '',
-      value: _toDoubleNullable(json['value']) ?? 0,
-      start: _toDoubleNullable(json['start']) ?? 0,
-      end: _toDoubleNullable(json['end']) ?? 0,
-      isTotal: (json['isTotal'] as bool?) ?? false,
+      name: (_readValue(json, 'name') as String?) ?? '',
+      value: _toDoubleNullable(_readValue(json, 'value')) ?? 0,
+      start: _toDoubleNullable(_readValue(json, 'start')) ?? 0,
+      end: _toDoubleNullable(_readValue(json, 'end')) ?? 0,
+      isTotal: (_readValue(json, 'isTotal') as bool?) ?? false,
     );
   }
 }
@@ -264,4 +264,18 @@ List<dynamic> _readList(dynamic value) {
     }
   }
   return const [];
+}
+
+dynamic _readValue(Map<String, dynamic> json, String key) {
+  if (json.containsKey(key)) {
+    return json[key];
+  }
+
+  for (final entry in json.entries) {
+    if (entry.key.toLowerCase() == key.toLowerCase()) {
+      return entry.value;
+    }
+  }
+
+  return null;
 }

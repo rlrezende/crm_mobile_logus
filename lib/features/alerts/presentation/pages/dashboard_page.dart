@@ -1004,6 +1004,8 @@ class _ContributionChartCard extends StatelessWidget {
                   color: const Color(0xFF17375B),
                 ),
           ),
+          const SizedBox(height: 12),
+          _ContributionBreakdown(points: points),
         ],
       ),
     );
@@ -1033,18 +1035,17 @@ class _ContributionWaterfallChart extends StatelessWidget {
     final maxY = maxValue + extra;
     final interval = _axisInterval(minY, maxY);
 
-    final chartWidth = math.max(360.0, points.length * 88.0);
+    final chartWidth = math.max(320.0, points.length * 72.0);
 
     final barGroups = List.generate(points.length, (index) {
       final point = points[index];
       return BarChartGroupData(
         x: index,
-        showingTooltipIndicators: const [0],
         barRods: [
           BarChartRodData(
             fromY: point.start,
             toY: point.end,
-            width: 26,
+            width: 22,
             color: point.isTotal
                 ? const Color(0xFF44546A)
                 : point.value >= 0
@@ -1075,20 +1076,7 @@ class _ContributionWaterfallChart extends StatelessWidget {
               ),
             ),
             borderData: FlBorderData(show: false),
-            barTouchData: BarTouchData(
-              enabled: true,
-              touchTooltipData: BarTouchTooltipData(
-                tooltipRoundedRadius: 8,
-                getTooltipColor: (_) => Colors.black87,
-                getTooltipItem: (group, _, rod, __) {
-                  final point = points[group.x.toInt()];
-                  return BarTooltipItem(
-                    '${point.name}\n${_formatCurrency(point.value)}',
-                    const TextStyle(color: Colors.white),
-                  );
-                },
-              ),
-            ),
+            barTouchData: BarTouchData(enabled: false),
             titlesData: FlTitlesData(
               topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
               rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -1118,11 +1106,11 @@ class _ContributionWaterfallChart extends StatelessWidget {
                       axisSide: meta.axisSide,
                       space: 6,
                       child: Transform.rotate(
-                        angle: -0.75,
+                        angle: -0.58,
                         child: SizedBox(
-                          width: 78,
+                          width: 66,
                           child: Text(
-                            _shortLabel(points[index].name),
+                            _shortLabel(points[index].name, maxLength: 12),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -1140,6 +1128,81 @@ class _ContributionWaterfallChart extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ContributionBreakdown extends StatelessWidget {
+  const _ContributionBreakdown({required this.points});
+
+  final List<WaterfallPoint> points;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = points.where((point) => !point.isTotal).toList()
+      ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
+
+    if (rows.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final visibleRows = rows.take(8).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Detalhamento por classe',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1C3554),
+              ),
+        ),
+        const SizedBox(height: 8),
+        ...visibleRows.map(
+          (point) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: point.value >= 0 ? const Color(0xFF198754) : const Color(0xFFD94841),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    point.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF40546F),
+                        ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatCurrency(point.value),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: point.value >= 0 ? const Color(0xFF1D7E4B) : const Color(0xFFB7423C),
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (rows.length > visibleRows.length)
+          Text(
+            '+${rows.length - visibleRows.length} classes',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF6B7A8F),
+                ),
+          ),
+      ],
     );
   }
 }
@@ -1292,8 +1355,7 @@ double _axisInterval(double minY, double maxY) {
   return 50000;
 }
 
-String _shortLabel(String value) {
-  const maxLength = 16;
+String _shortLabel(String value, {int maxLength = 16}) {
   if (value.length <= maxLength) {
     return value;
   }
