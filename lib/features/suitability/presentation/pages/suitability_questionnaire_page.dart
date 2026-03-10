@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../data/models/suitability_models.dart';
 import '../controllers/suitability_controller.dart';
 
 class SuitabilityQuestionnairePage extends StatefulWidget {
@@ -98,17 +97,23 @@ class _SuitabilityQuestionnairePageState extends State<SuitabilityQuestionnaireP
                           const Chip(label: Text('Obrigatória')),
                         ],
                         const SizedBox(height: 8),
-                        ...question.options.map(
-                          (option) => RadioListTile<String>(
-                            contentPadding: EdgeInsets.zero,
-                            value: option.id,
-                            groupValue: controller.selectedOptions[question.id],
-                            onChanged: (value) {
-                              if (value != null) {
-                                controller.selectOption(question.id, value);
-                              }
-                            },
-                            title: Text(option.label),
+                        RadioGroup<String>(
+                          groupValue: controller.selectedOptions[question.id],
+                          onChanged: (value) {
+                            if (value != null) {
+                              controller.selectOption(question.id, value);
+                            }
+                          },
+                          child: Column(
+                            children: question.options
+                                .map(
+                                  (option) => RadioListTile<String>(
+                                    contentPadding: EdgeInsets.zero,
+                                    value: option.id,
+                                    title: Text(option.label),
+                                  ),
+                                )
+                                .toList(),
                           ),
                         ),
                       ],
@@ -137,17 +142,17 @@ class _SuitabilityQuestionnairePageState extends State<SuitabilityQuestionnaireP
                     onPressed: !controller.canSubmit || controller.isSubmitting
                         ? null
                         : () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(context);
                             final succeeded = await controller.submitAnswers();
                             if (!mounted) return;
                             if (succeeded) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Suitability atualizado com sucesso!')),
-                                );
-                              }
-                              Navigator.of(context).pop();
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('Suitability atualizado com sucesso!')),
+                              );
+                              navigator.pop();
                             } else if (controller.errorMessage != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(content: Text(controller.errorMessage!)),
                               );
                             }

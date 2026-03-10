@@ -55,7 +55,7 @@ class _LoginPageState extends State<LoginPage> {
           image: DecorationImage(
             image: const AssetImage('assets/images/fundo_logus.png'),
             fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.65), BlendMode.darken),
+            colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.65), BlendMode.darken),
           ),
         ),
         child: SafeArea(
