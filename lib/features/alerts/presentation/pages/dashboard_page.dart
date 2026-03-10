@@ -284,7 +284,8 @@ class _HeaderChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
+        // ignore: deprecated_member_use
+        color: Colors.white.withOpacity(0.14),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Text(
@@ -604,7 +605,7 @@ class _AllocationCard extends StatelessWidget {
                             value: percentValue <= 0 ? 0.001 : percentValue,
                             color: color,
                             radius: radius,
-                            title: percentValue <= 0 ? '' : '${percentValue.toStringAsFixed(1)}%',
+                            title: percentValue <= 0 ? '' : '${percentValue.toStringAsFixed(2)}%',
                             titleStyle: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -1195,7 +1196,8 @@ class _InfoPillDark extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        // ignore: deprecated_member_use
+        color: Colors.white.withOpacity(0.12),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
