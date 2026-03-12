@@ -1,4 +1,4 @@
-package com.example.crm_mobile_logus
+package com.logus.crm
 
 import io.flutter.embedding.android.FlutterActivity
 

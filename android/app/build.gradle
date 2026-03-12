@@ -17,7 +17,7 @@ def cmKeystorePassword = System.getenv("CM_KEYSTORE_PASSWORD")
 def cmKeystorePath = System.getenv("CM_KEYSTORE_PATH")
 
 android {
-    namespace = "com.example.crm_mobile_logus"
+    namespace = "com.logus.crm"
     compileSdk = 35
     ndkVersion = "26.1.10909125"
 
@@ -32,7 +32,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.crm_mobile_logus"
+        applicationId = "com.logus.crm"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
