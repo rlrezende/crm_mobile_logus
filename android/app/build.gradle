@@ -5,6 +5,17 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def cmKeyAlias = System.getenv("CM_KEY_ALIAS")
+def cmKeyPassword = System.getenv("CM_KEY_PASSWORD")
+def cmKeystorePassword = System.getenv("CM_KEYSTORE_PASSWORD")
+def cmKeystorePath = System.getenv("CM_KEYSTORE_PATH")
+
 android {
     namespace = "com.example.crm_mobile_logus"
     compileSdk = 35
@@ -30,11 +41,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        release {
+            keyAlias = cmKeyAlias ?: keystoreProperties["keyAlias"]
+            keyPassword = cmKeyPassword ?: keystoreProperties["keyPassword"]
+            storePassword = cmKeystorePassword ?: keystoreProperties["storePassword"]
+
+            def storeFilePath = cmKeystorePath ?: keystoreProperties["storeFile"]
+            if (storeFilePath != null && !storeFilePath.toString().trim().isEmpty()) {
+                storeFile = file(storeFilePath)
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig = signingConfigs.release
+            minifyEnabled = false
+            shrinkResources = false
         }
     }
 }
