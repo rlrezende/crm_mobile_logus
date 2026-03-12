@@ -68,10 +68,12 @@ class _LoginPageState extends State<LoginPage> {
               final showBiometricButton = controller.canUseBiometrics;
               final widgets = <Widget>[
                 const SizedBox(height: 32),
-                Image.asset(
-                  'assets/images/logus_logo.png',
-                  height: 60,
-                  color: Colors.white,
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Image.asset(
+                    'assets/images/logus_mark.png',
+                    height: 56,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(

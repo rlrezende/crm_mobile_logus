@@ -231,9 +231,8 @@ class _InvestorHeader extends StatelessWidget {
           Row(
             children: [
               Image.asset(
-                'assets/images/logus_logo.png',
-                height: 34,
-                color: Colors.white,
+                'assets/images/logus_mark.png',
+                height: 36,
               ),
               const Spacer(),
               IconButton(
