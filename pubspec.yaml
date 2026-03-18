@@ -67,6 +67,8 @@ flutter:
     - assets/images/logus_logo.png
     - assets/images/logus_mark.png
     - assets/images/fundo_logus.png
+    - assets/images/crm_logo.png
+    - assets/images/globo_bg.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

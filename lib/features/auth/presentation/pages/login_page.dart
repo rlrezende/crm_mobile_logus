@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
@@ -53,11 +53,11 @@ class _LoginPageState extends State<LoginPage> {
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: const AssetImage('assets/images/fundo_logus.png'),
+            image: const AssetImage('assets/images/globo_bg.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               // ignore: deprecated_member_use
-              Colors.black.withOpacity(0.65),
+              Colors.black.withOpacity(0.55),
               BlendMode.darken,
             ),
           ),
@@ -69,15 +69,16 @@ class _LoginPageState extends State<LoginPage> {
               final widgets = <Widget>[
                 const SizedBox(height: 32),
                 Align(
-                  alignment: Alignment.topLeft,
+                  alignment: Alignment.topCenter,
                   child: Image.asset(
-                    'assets/images/logus_mark.png',
-                    height: 56,
+                    'assets/images/crm_logo.png',
+                    height: 96,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Bem-vindo ao Logus Capital',
+                  'Bem-vindo,',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -121,7 +122,7 @@ class _LoginPageState extends State<LoginPage> {
                         decoration: const InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
-                          labelText: 'E-mail corporativo',
+                          labelText: 'E-mail',
                           prefixIcon: Icon(Icons.person_outline),
                         ),
                         keyboardType: TextInputType.emailAddress,
@@ -210,3 +211,5 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
+

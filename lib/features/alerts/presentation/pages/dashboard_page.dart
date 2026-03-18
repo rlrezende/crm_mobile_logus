@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +34,7 @@ class _DashboardPageState extends State<DashboardPage> {
   DashboardBenchmark _selectedBenchmark = DashboardBenchmark.cdi;
   late Future<InvestmentDashboardData> _dashboardFuture;
   int _touchedPieIndex = -1;
+  bool _hideValues = true;
 
   @override
   void initState() {
@@ -114,7 +115,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       const Icon(Icons.error_outline, size: 44),
                       const SizedBox(height: 12),
                       const Text(
-                        'Não foi possível carregar os dados financeiros.',
+                        'NÃ£o foi possÃ­vel carregar os dados financeiros.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
@@ -142,8 +143,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   _InvestorHeader(
                     customerName: user?.person.name ?? 'Cliente',
-                    portfolio: dashboard.portfolio,
-                    asOf: dashboard.asOf,
+                    hideValues: _hideValues,
+                    onToggleValues: () => setState(() => _hideValues = !_hideValues),
                     onLogout: () => context.read<AuthController>().logout(),
                   ),
                   Padding(
@@ -158,6 +159,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: _PrimaryMetricsPanel(
                       dashboard: dashboard,
                       benchmarkLabel: _selectedBenchmark.label,
+                      asOf: dashboard.asOf,
+                      hideValues: _hideValues,
                     ),
                   ),
                   Padding(
@@ -165,15 +168,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: _AllocationCard(
                       dashboard: dashboard,
                       touchedIndex: _touchedPieIndex,
-                      onTouch: (index, openDetails) {
-                        setState(() => _touchedPieIndex = index);
-                        if (openDetails &&
-                            index >= 0 &&
-                            index < dashboard.classes.length) {
-                          _openClassAssets(dashboard.classes[index]);
-                        }
-                      },
-                      onOpenOverview: () => _openClassOverview(dashboard.classes),
+                      hideValues: _hideValues,
+                      onTouch: (index) => setState(() => _touchedPieIndex = index),
+                      onOpenClass: _openClassAssets,
+                      onOpenOverview: () => _openClassOverview(
+                        dashboard.classes
+                            .where((item) => !_isHiddenClassName(item.name))
+                            .toList(),
+                      ),
                     ),
                   ),
                   Padding(
@@ -197,21 +199,19 @@ class _DashboardPageState extends State<DashboardPage> {
 class _InvestorHeader extends StatelessWidget {
   const _InvestorHeader({
     required this.customerName,
-    required this.portfolio,
-    required this.asOf,
+    required this.hideValues,
+    required this.onToggleValues,
     required this.onLogout,
   });
 
   final String customerName;
-  final String portfolio;
-  final DateTime? asOf;
+  final bool hideValues;
+  final VoidCallback onToggleValues;
   final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = asOf == null
-        ? 'Sem data de referência'
-        : 'Ref. ${DateFormat('dd/MM/yyyy').format(asOf!)}';
+    final firstName = _firstName(customerName);
 
     return Container(
       decoration: const BoxDecoration(
@@ -231,10 +231,18 @@ class _InvestorHeader extends StatelessWidget {
           Row(
             children: [
               Image.asset(
-                'assets/images/logus_mark.png',
-                height: 36,
+                'assets/images/logus_logo.png',
+                height: 28,
               ),
               const Spacer(),
+              IconButton(
+                onPressed: onToggleValues,
+                icon: Icon(
+                  hideValues ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                ),
+                color: Colors.white,
+                tooltip: hideValues ? 'Mostrar valores' : 'Ocultar valores',
+              ),
               IconButton(
                 onPressed: onLogout,
                 icon: const Icon(Icons.logout),
@@ -245,27 +253,11 @@ class _InvestorHeader extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Olá, $customerName',
+            'Olá, $firstName',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                 ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Painel financeiro do investidor',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white70,
-                ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _HeaderChip(label: portfolio.isEmpty ? 'Sem portfolio' : portfolio),
-              _HeaderChip(label: dateLabel),
-            ],
           ),
         ],
       ),
@@ -356,13 +348,20 @@ class _PrimaryMetricsPanel extends StatelessWidget {
   const _PrimaryMetricsPanel({
     required this.dashboard,
     required this.benchmarkLabel,
+    required this.asOf,
+    required this.hideValues,
   });
 
   final InvestmentDashboardData dashboard;
   final String benchmarkLabel;
+  final DateTime? asOf;
+  final bool hideValues;
 
   @override
   Widget build(BuildContext context) {
+    final dateLabel = asOf == null ? 'Sem data' : DateFormat('dd/MM/yyyy').format(asOf!);
+    final yearLabel = (asOf ?? DateTime.now()).year.toString();
+
     return Column(
       children: [
         Container(
@@ -373,15 +372,22 @@ class _PrimaryMetricsPanel extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 'Valor consolidado da carteira',
+                textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
-                _formatCurrency(dashboard.totalValue),
+                dateLabel,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                hideValues ? '••••' : _formatCurrency(dashboard.totalValue),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -399,19 +405,28 @@ class _PrimaryMetricsPanel extends StatelessWidget {
               width: _cardWidth(context),
               child: _MetricCard(
                 title: 'Mês',
-                primary: _formatPercent(dashboard.returns.month.percent, withSignal: true),
-                secondary: _formatCurrency(dashboard.returns.month.value),
-                benchmark: '$benchmarkLabel: ${_formatPercent(dashboard.returns.month.benchmark)}',
+                primary: hideValues
+                    ? '••••'
+                    : _formatPercent(dashboard.returns.month.percent, withSignal: true),
+                secondary:
+                    hideValues ? '••••' : _formatCurrency(dashboard.returns.month.value),
+                benchmark: hideValues
+                    ? '$benchmarkLabel: ••••'
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.month.benchmark)}',
                 accent: _performanceColor(dashboard.returns.month.percent),
               ),
             ),
             SizedBox(
               width: _cardWidth(context),
               child: _MetricCard(
-                title: 'YTD',
-                primary: _formatPercent(dashboard.returns.ytd.percent, withSignal: true),
-                secondary: _formatCurrency(dashboard.returns.ytd.value),
-                benchmark: '$benchmarkLabel: ${_formatPercent(dashboard.returns.ytd.benchmark)}',
+                title: yearLabel,
+                primary: hideValues
+                    ? '••••'
+                    : _formatPercent(dashboard.returns.ytd.percent, withSignal: true),
+                secondary: hideValues ? '••••' : _formatCurrency(dashboard.returns.ytd.value),
+                benchmark: hideValues
+                    ? '$benchmarkLabel: ••••'
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.ytd.benchmark)}',
                 accent: _performanceColor(dashboard.returns.ytd.percent),
               ),
             ),
@@ -419,33 +434,23 @@ class _PrimaryMetricsPanel extends StatelessWidget {
               width: _cardWidth(context),
               child: _MetricCard(
                 title: '12 Meses',
-                primary: _formatPercent(dashboard.returns.twelveMonths.percent, withSignal: true),
-                secondary: null,
-                benchmark: null,
+                primary: hideValues
+                    ? '••••'
+                    : _formatPercent(dashboard.returns.twelveMonths.percent, withSignal: true),
+                secondary: hideValues
+                    ? '••••'
+                    : _formatCurrency(dashboard.returns.twelveMonths.value),
+                benchmark: hideValues
+                    ? '$benchmarkLabel: ••••'
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.twelveMonths.benchmark)}',
                 accent: _performanceColor(dashboard.returns.twelveMonths.percent),
               ),
             ),
             SizedBox(
               width: _cardWidth(context),
               child: _MetricCard(
-                title: 'Desde o início',
-                primary: dashboard.returns.sinceInception.available
-                    ? _formatPercent(dashboard.returns.sinceInception.percent, withSignal: true)
-                    : 'Não disponível',
-                secondary: dashboard.returns.sinceInception.available
-                    ? _formatCurrency(dashboard.returns.sinceInception.value)
-                    : null,
-                benchmark: dashboard.returns.sinceInception.available
-                    ? '$benchmarkLabel: ${_formatPercent(dashboard.returns.sinceInception.benchmark)}'
-                    : 'Checar disponibilidade na Comdinheiro',
-                accent: _performanceColor(dashboard.returns.sinceInception.percent),
-              ),
-            ),
-            SizedBox(
-              width: _cardWidth(context),
-              child: _MetricCard(
                 title: 'Volatilidade (90 dias)',
-                primary: _formatPercent(dashboard.volatility90Days),
+                primary: hideValues ? '••••' : _formatPercent(dashboard.volatility90Days),
                 secondary: null,
                 benchmark: null,
                 accent: const Color(0xFF006E6D),
@@ -492,8 +497,9 @@ class _MetricCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF53637A),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF0E4A87),
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 6),
@@ -509,7 +515,8 @@ class _MetricCard extends StatelessWidget {
             Text(
               secondary!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF2B3E59),
+                    color: const Color(0xFF0E4A87),
+                    fontWeight: FontWeight.w700,
                   ),
             ),
           ],
@@ -518,7 +525,8 @@ class _MetricCard extends StatelessWidget {
             Text(
               benchmark!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF6B7A8F),
+                    color: const Color(0xFF0E4A87),
+                    fontWeight: FontWeight.w700,
                   ),
             ),
           ],
@@ -532,18 +540,22 @@ class _AllocationCard extends StatelessWidget {
   const _AllocationCard({
     required this.dashboard,
     required this.touchedIndex,
+    required this.hideValues,
     required this.onTouch,
+    required this.onOpenClass,
     required this.onOpenOverview,
   });
 
   final InvestmentDashboardData dashboard;
   final int touchedIndex;
-  final void Function(int index, bool openDetails) onTouch;
+  final bool hideValues;
+  final void Function(int index) onTouch;
+  final void Function(InvestmentClass classData) onOpenClass;
   final VoidCallback onOpenOverview;
 
   @override
   Widget build(BuildContext context) {
-    final classes = dashboard.classes;
+    final classes = dashboard.classes.where((item) => !_isHiddenClassName(item.name)).toList();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -555,7 +567,7 @@ class _AllocationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Alocação por classe de ativo',
+            'AlocaÃ§Ã£o por classe de ativo',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF17375B),
@@ -563,113 +575,121 @@ class _AllocationCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Toque no gráfico para abrir os investimentos da classe.',
+            'Toque no grÃ¡fico para abrir os investimentos da classe.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF6B7A8F)),
           ),
           const SizedBox(height: 14),
           if (classes.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
-              child: Text('Não há dados de classe disponíveis para este cliente.'),
+              child: Text('NÃ£o hÃ¡ dados de classe disponÃ­veis para este cliente.'),
             )
           else ...[
-            SizedBox(
-              height: 220,
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 6,
-                    child: PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 34,
-                        pieTouchData: PieTouchData(
-                          touchCallback: (event, response) {
-                            if (!event.isInterestedForInteractions || response?.touchedSection == null) {
-                              onTouch(-1, false);
-                              return;
-                            }
-                            final index = response!.touchedSection!.touchedSectionIndex;
-                            final openDetails = event is FlTapUpEvent;
-                            onTouch(index, openDetails);
-                          },
-                        ),
-                        sections: List.generate(classes.length, (index) {
-                          final classItem = classes[index];
-                          final isTouched = index == touchedIndex;
-                          final color = _chartPalette[index % _chartPalette.length];
-                          final percentValue = classItem.percent ?? 0;
-                          final radius = isTouched ? 82.0 : 72.0;
-                          return PieChartSectionData(
-                            value: percentValue <= 0 ? 0.001 : percentValue,
-                            color: color,
-                            radius: radius,
-                            title: percentValue <= 0 ? '' : '${percentValue.toStringAsFixed(2)}%',
-                            titleStyle: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 5,
-                    child: ListView.separated(
-                      itemCount: classes.length,
-                      itemBuilder: (context, index) {
-                        final item = classes[index];
-                        final color = _chartPalette[index % _chartPalette.length];
-                        return InkWell(
-                          onTap: () => onTouch(index, true),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: color,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                      Text(
-                                        '${_formatCurrency(item.value, compact: true)} • ${_formatPercent(item.percent)}',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: const Color(0xFF6B7A8F),
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
+            Center(
+              child: SizedBox(
+                height: 220,
+                width: 220,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 34,
+                    pieTouchData: PieTouchData(
+                      touchCallback: (event, response) {
+                        if (!event.isInterestedForInteractions ||
+                            response?.touchedSection == null) {
+                          onTouch(-1);
+                          return;
+                        }
+                        final index = response!.touchedSection!.touchedSectionIndex;
+                        onTouch(index);
+                        if (event is FlTapUpEvent &&
+                            index >= 0 &&
+                            index < classes.length) {
+                          onOpenClass(classes[index]);
+                        }
                       },
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    ),
+                    sections: List.generate(classes.length, (index) {
+                      final classItem = classes[index];
+                      final isTouched = index == touchedIndex;
+                      final color = _chartPalette[index % _chartPalette.length];
+                      final percentValue = classItem.percent ?? 0;
+                      final radius = isTouched ? 82.0 : 72.0;
+                      return PieChartSectionData(
+                        value: percentValue <= 0 ? 0.001 : percentValue,
+                        color: color,
+                        radius: radius,
+                        title: hideValues || percentValue <= 0
+                            ? ''
+                            : '${percentValue.toStringAsFixed(2)}%',
+                        titleStyle: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: classes.length,
+              itemBuilder: (context, index) {
+                final item = classes[index];
+                final color = _chartPalette[index % _chartPalette.length];
+                final valueLabel =
+                    hideValues ? '••••' : _formatCurrency(item.value, compact: true);
+                final percentLabel = hideValues ? '••••' : _formatPercent(item.percent);
+                return InkWell(
+                  onTap: () {
+                    onTouch(index);
+                    onOpenClass(item);
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              Text(
+                                '$valueLabel â€¢ $percentLabel',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: const Color(0xFF6B7A8F),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                );
+              },
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
             ),
             const SizedBox(height: 10),
             Align(
@@ -712,7 +732,7 @@ class _ActionButtons extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: onOpenContribution,
             icon: const Icon(Icons.waterfall_chart),
-            label: const Text('Contribuição'),
+            label: const Text('ContribuiÃ§Ã£o'),
           ),
         ),
       ],
@@ -730,22 +750,31 @@ class AssetClassOverviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibleClasses = classes.where((item) => !_isHiddenClassName(item.name)).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Abertura da Classe de Ativos'),
+        title: const Text(
+          'Abertura da Classe de Ativos',
+          style: TextStyle(color: Color(0xFF0E4A87)),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF0E4A87)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
       ),
-      body: classes.isEmpty
+      body: visibleClasses.isEmpty
           ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('Não há classes de ativo disponíveis para exibição.'),
+                child: Text('NÃ£o hÃ¡ classes de ativo disponÃ­veis para exibiÃ§Ã£o.'),
               ),
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemCount: classes.length,
+              itemCount: visibleClasses.length,
               itemBuilder: (context, index) {
-                final item = classes[index];
+                final item = visibleClasses[index];
                 return Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -773,6 +802,7 @@ class AssetClassOverviewPage extends StatelessWidget {
                                   item.name,
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF0E4A87),
                                       ),
                                 ),
                               ),
@@ -790,13 +820,17 @@ class AssetClassOverviewPage extends StatelessWidget {
                               ),
                               _InfoPill(
                                 label: 'Mês',
-                                value:
-                                    '${_formatCurrency(item.monthContribution)} • ${_formatPercent(item.monthReturnPercent, withSignal: true)}',
+                                value: _formatReturnLines(
+                                  nominal: item.monthContribution,
+                                  percent: item.monthReturnPercent,
+                                ),
                               ),
                               _InfoPill(
-                                label: 'YTD',
-                                value:
-                                    '${_formatCurrency(item.ytdContribution)} • ${_formatPercent(item.ytdReturnPercent, withSignal: true)}',
+                                label: 'Retorno Ano',
+                                value: _formatReturnLines(
+                                  nominal: item.ytdContribution,
+                                  percent: item.ytdReturnPercent,
+                                ),
                               ),
                             ],
                           ),
@@ -823,7 +857,16 @@ class ClassAssetsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(classData.name)),
+      appBar: AppBar(
+        title: Text(
+          classData.name,
+          style: const TextStyle(color: Color(0xFF0E4A87)),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF0E4A87)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -847,13 +890,17 @@ class ClassAssetsPage extends StatelessWidget {
                 ),
                 _InfoPillDark(
                   label: 'Retorno Mês',
-                  value:
-                      '${_formatCurrency(classData.monthContribution)} • ${_formatPercent(classData.monthReturnPercent, withSignal: true)}',
+                  value: _formatReturnLines(
+                    nominal: classData.monthContribution,
+                    percent: classData.monthReturnPercent,
+                  ),
                 ),
                 _InfoPillDark(
-                  label: 'Retorno YTD',
-                  value:
-                      '${_formatCurrency(classData.ytdContribution)} • ${_formatPercent(classData.ytdReturnPercent, withSignal: true)}',
+                  label: 'Retorno Ano',
+                  value: _formatReturnLines(
+                    nominal: classData.ytdContribution,
+                    percent: classData.ytdReturnPercent,
+                  ),
                 ),
               ],
             ),
@@ -863,13 +910,14 @@ class ClassAssetsPage extends StatelessWidget {
             'Investimentos da classe',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0E4A87),
                 ),
           ),
           const SizedBox(height: 10),
           if (classData.assets.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text('Não há ativos detalhados para esta classe.'),
+              child: Text('NÃ£o hÃ¡ ativos detalhados para esta classe.'),
             )
           else
             ...classData.assets.map(
@@ -890,6 +938,7 @@ class ClassAssetsPage extends StatelessWidget {
                           asset.name,
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
+                                color: const Color(0xFF0E4A87),
                               ),
                         ),
                         const SizedBox(height: 8),
@@ -901,11 +950,23 @@ class ClassAssetsPage extends StatelessWidget {
                             _InfoPill(label: '% Carteira', value: _formatPercent(asset.portfolioPercent)),
                             _InfoPill(
                               label: 'Mês',
-                              value: _formatPercent(asset.monthReturnPercent, withSignal: true),
+                              value: _formatReturnLines(
+                                nominal: _nominalFromBase(
+                                  asset.value,
+                                  asset.monthReturnPercent,
+                                ),
+                                percent: asset.monthReturnPercent,
+                              ),
                             ),
                             _InfoPill(
-                              label: 'YTD',
-                              value: _formatPercent(asset.ytdReturnPercent, withSignal: true),
+                              label: 'Retorno Ano',
+                              value: _formatReturnLines(
+                                nominal: _nominalFromBase(
+                                  asset.value,
+                                  asset.ytdReturnPercent,
+                                ),
+                                percent: asset.ytdReturnPercent,
+                              ),
                             ),
                             if ((asset.liquidity ?? '').trim().isNotEmpty)
                               _InfoPill(label: 'Liquidez', value: asset.liquidity!.trim()),
@@ -935,19 +996,19 @@ class PerformanceContributionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Performance Contribuição Financeira'),
+        title: const Text('Performance ContribuiÃ§Ã£o Financeira'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _ContributionChartCard(
-            title: 'Contribuição Financeira no Mês',
+            title: 'ContribuiÃ§Ã£o Financeira no MÃªs',
             points: dashboard.contributions.month,
             total: dashboard.contributions.monthTotal,
           ),
           const SizedBox(height: 14),
           _ContributionChartCard(
-            title: 'Contribuição Financeira no Ano (YTD)',
+            title: 'ContribuiÃ§Ã£o Financeira no Ano (YTD)',
             points: dashboard.contributions.ytd,
             total: dashboard.contributions.ytdTotal,
           ),
@@ -994,7 +1055,7 @@ class _ContributionChartCard extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 14),
-          _ContributionWaterfallChart(points: points),
+          _ContributionBarChart(points: points),
           const SizedBox(height: 8),
           Text(
             'Total: ${_formatCurrency(total)}',
@@ -1003,205 +1064,132 @@ class _ContributionChartCard extends StatelessWidget {
                   color: const Color(0xFF17375B),
                 ),
           ),
-          const SizedBox(height: 12),
-          _ContributionBreakdown(points: points),
         ],
       ),
     );
   }
 }
 
-class _ContributionWaterfallChart extends StatelessWidget {
-  const _ContributionWaterfallChart({required this.points});
+class _ContributionBarChart extends StatelessWidget {
+  const _ContributionBarChart({required this.points});
 
   final List<WaterfallPoint> points;
 
   @override
   Widget build(BuildContext context) {
-    if (points.isEmpty) {
+    final rows = points.where((point) => !point.isTotal).toList();
+    if (rows.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
-        child: Text('Sem dados de contribuição para este período.'),
+        child: Text('Sem dados de contribuiÃ§Ã£o para este perÃ­odo.'),
       );
     }
 
-    final rangeValues = points.expand((p) => [p.start, p.end]).toList();
-    final minValue = math.min<double>(0.0, rangeValues.reduce(math.min));
-    final maxValue = math.max<double>(0.0, rangeValues.reduce(math.max));
-    final delta = (maxValue - minValue).abs();
-    final extra = delta == 0 ? 1 : delta * 0.18;
-    final minY = minValue - extra;
-    final maxY = maxValue + extra;
-    final interval = _axisInterval(minY, maxY);
+    final maxAbs = rows.map((row) => row.value.abs()).fold<double>(0, math.max);
 
-    final chartWidth = math.max(320.0, points.length * 72.0);
-
-    final barGroups = List.generate(points.length, (index) {
-      final point = points[index];
-      return BarChartGroupData(
-        x: index,
-        barRods: [
-          BarChartRodData(
-            fromY: point.start,
-            toY: point.end,
-            width: 22,
-            color: point.isTotal
-                ? const Color(0xFF44546A)
-                : point.value >= 0
-                    ? const Color(0xFF198754)
-                    : const Color(0xFFD94841),
-            borderRadius: BorderRadius.circular(6),
-          ),
-        ],
-      );
-    });
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: chartWidth,
-        height: 280,
-        child: BarChart(
-          BarChartData(
-            minY: minY,
-            maxY: maxY,
-            barGroups: barGroups,
-            gridData: FlGridData(
-              horizontalInterval: interval,
-              drawVerticalLine: false,
-              getDrawingHorizontalLine: (_) => const FlLine(
-                color: Color(0xFFE4EAF1),
-                strokeWidth: 1,
-              ),
+    return Column(
+      children: rows
+          .map(
+            (row) => _ContributionBarRow(
+              label: row.name,
+              value: row.value,
+              maxAbs: maxAbs,
             ),
-            borderData: FlBorderData(show: false),
-            barTouchData: BarTouchData(enabled: false),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  interval: interval,
-                  reservedSize: 52,
-                  getTitlesWidget: (value, meta) {
-                    return Text(
-                      _formatCurrencyCompact(value),
-                      style: const TextStyle(fontSize: 10, color: Color(0xFF5F6F86)),
-                    );
-                  },
-                ),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 64,
-                  getTitlesWidget: (value, meta) {
-                    final index = value.toInt();
-                    if (index < 0 || index >= points.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return SideTitleWidget(
-                      axisSide: meta.axisSide,
-                      space: 6,
-                      child: Transform.rotate(
-                        angle: -0.58,
-                        child: SizedBox(
-                          width: 66,
-                          child: Text(
-                            _shortLabel(points[index].name, maxLength: 12),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF4F6079),
-                            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _ContributionBarRow extends StatelessWidget {
+  const _ContributionBarRow({
+    required this.label,
+    required this.value,
+    required this.maxAbs,
+  });
+
+  final String label;
+  final double value;
+  final double maxAbs;
+
+  @override
+  Widget build(BuildContext context) {
+    final barColor = value >= 0 ? const Color(0xFF198754) : const Color(0xFFD94841);
+    final valueLabel = _formatCurrencyCompact(value);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              _shortLabel(label, maxLength: 18),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF40546F),
+                  ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final halfWidth = (constraints.maxWidth - 1) / 2;
+                final width = maxAbs <= 0 ? 0 : (value.abs() / maxAbs) * halfWidth;
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          width: value < 0 ? width : 0,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(6),
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ContributionBreakdown extends StatelessWidget {
-  const _ContributionBreakdown({required this.points});
-
-  final List<WaterfallPoint> points;
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = points.where((point) => !point.isTotal).toList()
-      ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
-
-    if (rows.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final visibleRows = rows.take(8).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Detalhamento por classe',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1C3554),
-              ),
-        ),
-        const SizedBox(height: 8),
-        ...visibleRows.map(
-          (point) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: point.value >= 0 ? const Color(0xFF198754) : const Color(0xFFD94841),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    point.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF40546F),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 14,
+                      color: const Color(0xFFE4EAF1),
+                    ),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width: value > 0 ? width : 0,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _formatCurrency(point.value),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: point.value >= 0 ? const Color(0xFF1D7E4B) : const Color(0xFFB7423C),
                       ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
-        ),
-        if (rows.length > visibleRows.length)
-          Text(
-            '+${rows.length - visibleRows.length} classes',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF6B7A8F),
-                ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 64,
+            child: Text(
+              valueLabel,
+              textAlign: TextAlign.right,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: barColor,
+                  ),
+            ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1335,6 +1323,19 @@ String _formatPercent(double? value, {bool withSignal = false}) {
   return '$sign$abs%';
 }
 
+String _formatReturnLines({double? nominal, double? percent}) {
+  final nominalLabel = _formatCurrency(nominal);
+  final percentLabel = _formatPercent(percent, withSignal: true);
+  return '$nominalLabel\n$percentLabel';
+}
+
+double? _nominalFromBase(double? baseValue, double? percent) {
+  if (baseValue == null || percent == null) {
+    return null;
+  }
+  return baseValue * percent / 100;
+}
+
 Color _performanceColor(double? value) {
   if (value == null) {
     return const Color(0xFF17375B);
@@ -1358,5 +1359,63 @@ String _shortLabel(String value, {int maxLength = 16}) {
   if (value.length <= maxLength) {
     return value;
   }
-  return '${value.substring(0, maxLength - 1)}…';
+  return '${value.substring(0, maxLength - 1)}â€¦';
 }
+
+String _firstName(String name) {
+  final trimmed = name.trim();
+  if (trimmed.isEmpty) {
+    return name;
+  }
+  final parts = trimmed.split(RegExp(r'\s+'));
+  return parts.isEmpty ? trimmed : parts.first;
+}
+
+bool _isHiddenClassName(String name) {
+  return _isTotalCarteira(name) || _isCaixaBloqueado(name);
+}
+
+bool _isTotalCarteira(String name) {
+  final normalized = _normalizeLabel(name);
+  return normalized.contains('total da carteira') || normalized.contains('total carteira');
+}
+
+bool _isCaixaBloqueado(String name) {
+  final normalized = _normalizeLabel(name);
+  return normalized.contains('caixa bloqueado') || normalized.contains('caixa bloqueada');
+}
+
+String _normalizeLabel(String value) {
+  var result = value.toLowerCase();
+  const replacements = {
+    'á': 'a',
+    'à': 'a',
+    'ã': 'a',
+    'â': 'a',
+    'ä': 'a',
+    'é': 'e',
+    'ê': 'e',
+    'è': 'e',
+    'ë': 'e',
+    'í': 'i',
+    'ì': 'i',
+    'î': 'i',
+    'ï': 'i',
+    'ó': 'o',
+    'ô': 'o',
+    'õ': 'o',
+    'ö': 'o',
+    'ò': 'o',
+    'ú': 'u',
+    'ù': 'u',
+    'û': 'u',
+    'ü': 'u',
+    'ç': 'c',
+  };
+  replacements.forEach((key, replacement) {
+    result = result.replaceAll(key, replacement);
+  });
+  result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return result;
+}
+
