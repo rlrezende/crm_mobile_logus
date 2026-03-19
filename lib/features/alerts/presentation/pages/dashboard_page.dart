@@ -1128,8 +1128,9 @@ class _ContributionBarRow extends StatelessWidget {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final halfWidth = (constraints.maxWidth - 1) / 2;
-                final width = maxAbs <= 0 ? 0 : (value.abs() / maxAbs) * halfWidth;
+                final double halfWidth = (constraints.maxWidth - 1) / 2;
+                final double width =
+                    maxAbs <= 0 ? 0.0 : (value.abs() / maxAbs) * halfWidth;
                 return Row(
                   children: [
                     Expanded(
