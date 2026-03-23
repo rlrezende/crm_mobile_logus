@@ -8,6 +8,7 @@ class InvestmentDashboardData {
     required this.volatility90Days,
     required this.classes,
     required this.contributions,
+    required this.liquidity,
   });
 
   final String benchmark;
@@ -18,6 +19,7 @@ class InvestmentDashboardData {
   final double? volatility90Days;
   final List<InvestmentClass> classes;
   final ContributionSeries contributions;
+  final LiquiditySummary liquidity;
 
   factory InvestmentDashboardData.fromJson(Map<String, dynamic> json) {
     final classesJson = _readList(_readValue(json, 'classes'));
@@ -33,6 +35,7 @@ class InvestmentDashboardData {
           .map((item) => InvestmentClass.fromJson(item.cast<String, dynamic>()))
           .toList(),
       contributions: ContributionSeries.fromJson(_readMap(_readValue(json, 'contributions'))),
+      liquidity: LiquiditySummary.fromJson(_readMap(_readValue(json, 'liquidity'))),
     );
   }
 }
@@ -204,6 +207,55 @@ class WaterfallPoint {
       start: _toDoubleNullable(_readValue(json, 'start')) ?? 0,
       end: _toDoubleNullable(_readValue(json, 'end')) ?? 0,
       isTotal: (_readValue(json, 'isTotal') as bool?) ?? false,
+    );
+  }
+}
+
+class LiquiditySummary {
+  LiquiditySummary({
+    required this.available,
+    required this.buckets,
+    this.total,
+  });
+
+  final bool available;
+  final List<LiquidityBucket> buckets;
+  final LiquidityBucket? total;
+
+  factory LiquiditySummary.fromJson(Map<String, dynamic> json) {
+    final bucketsJson = _readList(_readValue(json, 'buckets'));
+    final parsedBuckets = bucketsJson
+        .whereType<Map>()
+        .map((item) => LiquidityBucket.fromJson(item.cast<String, dynamic>()))
+        .toList();
+    final totalJson = _readMap(_readValue(json, 'total'));
+    final parsedTotal = totalJson.isEmpty ? null : LiquidityBucket.fromJson(totalJson);
+
+    return LiquiditySummary(
+      available: (_readValue(json, 'available') as bool?) ??
+          (parsedBuckets.isNotEmpty || parsedTotal != null),
+      buckets: parsedBuckets,
+      total: parsedTotal,
+    );
+  }
+}
+
+class LiquidityBucket {
+  LiquidityBucket({
+    required this.label,
+    this.value,
+    this.percent,
+  });
+
+  final String label;
+  final double? value;
+  final double? percent;
+
+  factory LiquidityBucket.fromJson(Map<String, dynamic> json) {
+    return LiquidityBucket(
+      label: (_readValue(json, 'label') as String?) ?? '',
+      value: _toDoubleNullable(_readValue(json, 'value')),
+      percent: _toDoubleNullable(_readValue(json, 'percent')),
     );
   }
 }

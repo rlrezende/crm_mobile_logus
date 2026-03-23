@@ -182,6 +182,13 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: _LiquidityCard(
+                      liquidity: dashboard.liquidity,
+                      hideValues: _hideValues,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                     child: _ActionButtons(
                       onOpenClasses: () => _openClassOverview(dashboard.classes),
                       onOpenContribution: () => _openContribution(dashboard),
@@ -727,6 +734,190 @@ class _ActionButtons extends StatelessWidget {
             icon: const Icon(Icons.waterfall_chart),
             label: const Text('ContribuiÃ§Ã£o'),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LiquidityCard extends StatelessWidget {
+  const _LiquidityCard({
+    required this.liquidity,
+    required this.hideValues,
+  });
+
+  final LiquiditySummary liquidity;
+  final bool hideValues;
+
+  @override
+  Widget build(BuildContext context) {
+    final buckets = liquidity.buckets.where((item) => item.label.trim().isNotEmpty).toList();
+    final hasData = buckets.isNotEmpty || liquidity.total != null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFDCE4ED)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Liquidez da carteira',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF17375B),
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Prazo estimado de resgate por faixa (dias corridos).',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF6B7A8F),
+                ),
+          ),
+          const SizedBox(height: 14),
+          if (!hasData)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Sem dados de liquidez disponiveis para este cliente.'),
+            )
+          else ...[
+            ...List.generate(buckets.length, (index) {
+              final bucket = buckets[index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: index == buckets.length - 1 ? 0 : 10),
+                child: _LiquidityBucketRow(
+                  bucket: bucket,
+                  color: _chartPalette[index % _chartPalette.length],
+                  hideValues: hideValues,
+                ),
+              );
+            }),
+            if (liquidity.total != null) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFE3EAF2)),
+              const SizedBox(height: 12),
+              _LiquidityTotalRow(
+                total: liquidity.total!,
+                hideValues: hideValues,
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LiquidityBucketRow extends StatelessWidget {
+  const _LiquidityBucketRow({
+    required this.bucket,
+    required this.color,
+    required this.hideValues,
+  });
+
+  final LiquidityBucket bucket;
+  final Color color;
+  final bool hideValues;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawPercent = bucket.percent ?? 0;
+    final normalizedBar = (rawPercent / 100).clamp(0, 1).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                bucket.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF17375B),
+                    ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              hideValues ? '••••' : _formatPercent(bucket.percent),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF17375B),
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          hideValues ? '••••' : _formatCurrency(bucket.value),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF6B7A8F),
+              ),
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: normalizedBar,
+            minHeight: 8,
+            backgroundColor: const Color(0xFFE9EFF6),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LiquidityTotalRow extends StatelessWidget {
+  const _LiquidityTotalRow({
+    required this.total,
+    required this.hideValues,
+  });
+
+  final LiquidityBucket total;
+  final bool hideValues;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalLabel = total.label.trim().isEmpty ? 'Total' : total.label.trim();
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            totalLabel,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0E4A87),
+                ),
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              hideValues ? '••••' : _formatCurrency(total.value),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF17375B),
+                  ),
+            ),
+            Text(
+              hideValues ? '••••' : _formatPercent(total.percent),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF6B7A8F),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
         ),
       ],
     );
@@ -1411,4 +1602,3 @@ String _normalizeLabel(String value) {
   result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
   return result;
 }
-
