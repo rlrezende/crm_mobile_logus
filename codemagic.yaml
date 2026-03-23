@@ -1,14 +1,22 @@
 workflows:
   release-builds:
     name: Logus CRM Mobile
-    max_build_duration: 60
+    max_build_duration: 120
+    instance_type: mac_mini_m2
     environment:
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.logus.crm
       android_signing:
         - logus-android-key
       # Codemagic já fornece Xcode/Android SDK quando necessário
       vars:
         API_BASE_URL: https://crmapi.loguscapital.com:446/api
         LOG_NETWORK: "false"
+        APP_STORE_APP_ID: "6761010977"
+        BUNDLE_ID: "com.logus.crm"
     scripts:
 #      - name: Use Flutter channel stable
 #        script: |
@@ -26,68 +34,10 @@ workflows:
       - name: Install dependencies
         script: |
           export PATH=/tmp/flutter_3_41/bin:$PATH
+          flutter clean
           flutter pub get
-      - name: Run tests
-        script: |
-          export PATH=/tmp/flutter_3_41/bin:$PATH
-          flutter test
-      - name: Build Android APK (release)
-        script: |
-          export PATH=/tmp/flutter_3_41/bin:$PATH
-          flutter build apk --release \
-            --dart-define API_BASE_URL=$API_BASE_URL \
-            --dart-define LOG_NETWORK=$LOG_NETWORK
-      - name: Build Android App Bundle (release)
-        script: |
-          export PATH=/tmp/flutter_3_41/bin:$PATH
-          flutter build appbundle --release \
-            --dart-define API_BASE_URL=$API_BASE_URL \
-            --dart-define LOG_NETWORK=$LOG_NETWORK
-      - name: Build iOS (release)
-        script: |
-          export PATH=/tmp/flutter_3_41/bin:$PATH
-          flutter build ios --release --no-codesign \
-            --dart-define API_BASE_URL=$API_BASE_URL \
-            --dart-define LOG_NETWORK=$LOG_NETWORK
-    artifacts:
-      - build/**/outputs/**/*.apk
-      - build/**/outputs/**/*.aab
-      - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
-
-  ios-testflight:
-    name: Logus Investimentos Cliente iOS TestFlight
-    max_build_duration: 90
-    instance_type: mac_mini_m2
-    environment:
-      xcode: latest
-      cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.logus.crm
-      vars:
-        API_BASE_URL: https://crmapi.loguscapital.com:446/api
-        LOG_NETWORK: "false"
-        APP_STORE_APP_ID: "6761010977"
-        BUNDLE_ID: "com.logus.crm"
-    scripts:
-      - name: Setup Flutter 3.41.4
-        script: |
-          git clone --branch 3.41.4 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_41
-          /tmp/flutter_3_41/bin/flutter --version
-      - name: Detect Flutter project directory
-        script: |
-          if [ -f "pubspec.yaml" ]; then
-            echo "APP_DIR=." >> "$CM_ENV"
-          elif [ -f "crm_mobile_logus/pubspec.yaml" ]; then
-            echo "APP_DIR=crm_mobile_logus" >> "$CM_ENV"
-          else
-            echo "pubspec.yaml not found"
-            exit 1
-          fi
       - name: Validate iOS project and Bundle ID
         script: |
-          cd "$APP_DIR"
           test -d ios
           test -f ios/Runner.xcodeproj/project.pbxproj
           test -f ios/Podfile
@@ -105,19 +55,28 @@ workflows:
             echo "APP_STORE_CONNECT_PRIVATE_KEY is invalid: missing END PRIVATE KEY"
             exit 1
           fi
-      - name: Install dependencies
+      - name: Run tests
         script: |
           export PATH=/tmp/flutter_3_41/bin:$PATH
-          cd "$APP_DIR"
-          flutter clean
-          flutter pub get
+          flutter test
+      - name: Build Android APK (release)
+        script: |
+          export PATH=/tmp/flutter_3_41/bin:$PATH
+          flutter build apk --release \
+            --dart-define API_BASE_URL=$API_BASE_URL \
+            --dart-define LOG_NETWORK=$LOG_NETWORK
+      - name: Build Android App Bundle (release)
+        script: |
+          export PATH=/tmp/flutter_3_41/bin:$PATH
+          flutter build appbundle --release \
+            --dart-define API_BASE_URL=$API_BASE_URL \
+            --dart-define LOG_NETWORK=$LOG_NETWORK
       - name: Install CocoaPods
         script: |
-          cd "$APP_DIR/ios"
+          cd ios
           pod install
       - name: Configure automatic code signing
         script: |
-          cd "$APP_DIR"
           xcode-project use-profiles --project ios/Runner.xcodeproj
       - name: Validate export method and set build number
         script: |
@@ -133,19 +92,19 @@ workflows:
           fi
           echo "IOS_BUILD_NUMBER=$IOS_BUILD_NUMBER" >> "$CM_ENV"
           echo "Using iOS build number: $IOS_BUILD_NUMBER"
-      - name: Build signed IPA
+      - name: Build signed iOS IPA
         script: |
           export PATH=/tmp/flutter_3_41/bin:$PATH
-          cd "$APP_DIR"
           flutter build ipa --release \
             --build-number="$IOS_BUILD_NUMBER" \
             --export-options-plist="$CM_EXPORT_OPTIONS_PATH" \
-            --dart-define API_BASE_URL="$API_BASE_URL" \
-            --dart-define LOG_NETWORK="$LOG_NETWORK"
+            --dart-define API_BASE_URL=$API_BASE_URL \
+            --dart-define LOG_NETWORK=$LOG_NETWORK
     artifacts:
-      - "**/build/ios/ipa/*.ipa"
-      - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
@@ -153,5 +112,3 @@ workflows:
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         submit_to_app_store: false
-        # Codemagic App Store Connect publishing doesn't support `wait_for_processing`.
-        # Processing status can be monitored in App Store Connect/TestFlight.
