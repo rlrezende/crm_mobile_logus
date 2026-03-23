@@ -27,6 +27,10 @@ workflows:
         script: |
           git clone --branch 3.41.4 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_41
           /tmp/flutter_3_41/bin/flutter --version
+      - name: Precache Flutter artifacts (iOS/Android)
+        script: |
+          export PATH=/tmp/flutter_3_41/bin:$PATH
+          flutter precache --ios --android
       - name: Ensure Android SDK/NDK
         script: |
           export ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-$ANDROID_HOME}
@@ -75,6 +79,7 @@ workflows:
             --dart-define LOG_NETWORK=$LOG_NETWORK
       - name: Install CocoaPods
         script: |
+          export PATH=/tmp/flutter_3_41/bin:$PATH
           cd ios
           rm -rf Pods Podfile.lock
           pod install
