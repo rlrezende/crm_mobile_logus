@@ -494,6 +494,28 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget buildOptionalLine({
+      required String? value,
+      required TextStyle? style,
+      required double topSpacing,
+    }) {
+      return Opacity(
+        opacity: value == null ? 0.0 : 1.0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: topSpacing),
+            Text(
+              value ?? ' ',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -519,26 +541,22 @@ class _MetricCard extends StatelessWidget {
                   color: accent,
                 ),
           ),
-          if (secondary != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              secondary!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF0E4A87),
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ],
-          if (benchmark != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              benchmark!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF0E4A87),
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-          ],
+          buildOptionalLine(
+            value: secondary,
+            topSpacing: 4,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF0E4A87),
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          buildOptionalLine(
+            value: benchmark,
+            topSpacing: 6,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF0E4A87),
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
         ],
       ),
     );
