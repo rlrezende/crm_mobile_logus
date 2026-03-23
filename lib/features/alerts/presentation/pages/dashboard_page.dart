@@ -115,7 +115,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       const Icon(Icons.error_outline, size: 44),
                       const SizedBox(height: 12),
                       const Text(
-                        'NÃ£o foi possÃ­vel carregar os dados financeiros.',
+                        'Não foi possível carregar os dados financeiros.',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
@@ -447,9 +447,9 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                 primary: hideValues
                     ? '••••'
                     : _formatPercent(dashboard.returns.twelveMonths.percent, withSignal: true),
-                secondary: hideValues
-                    ? '••••'
-                    : _formatCurrency(dashboard.returns.twelveMonths.value),
+                secondary: dashboard.returns.twelveMonths.value == null
+                    ? null
+                    : (hideValues ? '••••' : _formatCurrency(dashboard.returns.twelveMonths.value)),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
                     : '$benchmarkLabel: ${_formatPercent(isIbovespa ? dashboard.returns.twelveMonths.benchmark?.abs() : dashboard.returns.twelveMonths.benchmark)}',
@@ -575,7 +575,7 @@ class _AllocationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'AlocaÃ§Ã£o por classe de ativo',
+            'Alocação por classe de ativo',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF17375B),
@@ -583,14 +583,14 @@ class _AllocationCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Toque no grÃ¡fico ou na legenda para ver os investimentos da classe.',
+            'Toque no gráfico ou na legenda para ver os investimentos da classe.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF6B7A8F)),
           ),
           const SizedBox(height: 14),
           if (classes.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
-              child: Text('NÃ£o hÃ¡ dados de classe disponÃ­veis para este cliente.'),
+              child: Text('Não há dados de classe disponíveis para este cliente.'),
             )
           else ...[
             Center(
@@ -609,7 +609,9 @@ class _AllocationCard extends StatelessWidget {
                           return;
                         }
                         final index = response!.touchedSection!.touchedSectionIndex;
-                        final openDetails = event is FlTapUpEvent;
+                        // Em mobile, abrir no TapDown é mais estável que TapUp
+                        // para evitar a necessidade de múltiplos toques.
+                        final openDetails = event is FlTapDownEvent;
                         onTouch(index, openDetails);
                       },
                     ),
@@ -676,7 +678,7 @@ class _AllocationCard extends StatelessWidget {
                               Text(
                                 hideValues
                                     ? '•••• ••••'
-                                    : '${_formatCurrency(item.value, compact: true)} â€¢ ${_formatPercent(item.percent)}',
+                                    : '${_formatCurrency(item.value, compact: true)} • ${_formatPercent(item.percent)}',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: const Color(0xFF6B7A8F),
                                     ),
@@ -732,7 +734,7 @@ class _ActionButtons extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: onOpenContribution,
             icon: const Icon(Icons.waterfall_chart),
-            label: const Text('ContribuiÃ§Ã£o'),
+            label: const Text('Contribuição'),
           ),
         ),
       ],
@@ -950,7 +952,7 @@ class AssetClassOverviewPage extends StatelessWidget {
           ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('NÃ£o hÃ¡ classes de ativo disponÃ­veis para exibiÃ§Ã£o.'),
+                child: Text('Não há classes de ativo disponíveis para exibição.'),
               ),
             )
           : ListView.separated(
@@ -1100,7 +1102,7 @@ class ClassAssetsPage extends StatelessWidget {
           if (classData.assets.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text('NÃ£o hÃ¡ ativos detalhados para esta classe.'),
+              child: Text('Não há ativos detalhados para esta classe.'),
             )
           else
             ...classData.assets.map(
@@ -1179,19 +1181,19 @@ class PerformanceContributionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Performance ContribuiÃ§Ã£o Financeira'),
+        title: const Text('Performance Contribuição Financeira'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _ContributionChartCard(
-            title: 'ContribuiÃ§Ã£o Financeira no MÃªs',
+            title: 'Contribuição Financeira no Mês',
             points: dashboard.contributions.month,
             total: dashboard.contributions.monthTotal,
           ),
           const SizedBox(height: 14),
           _ContributionChartCard(
-            title: 'ContribuiÃ§Ã£o Financeira no Ano (YTD)',
+            title: 'Contribuição Financeira no Ano (YTD)',
             points: dashboard.contributions.ytd,
             total: dashboard.contributions.ytdTotal,
           ),
@@ -1264,7 +1266,7 @@ class _ContributionBarChart extends StatelessWidget {
     if (rows.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
-        child: Text('Sem dados de contribuiÃ§Ã£o para este perÃ­odo.'),
+        child: Text('Sem dados de contribuição para este período.'),
       );
     }
 
@@ -1530,7 +1532,7 @@ String _shortLabel(String value, {int maxLength = 16}) {
   if (value.length <= maxLength) {
     return value;
   }
-  return '${value.substring(0, maxLength - 1)}â€¦';
+  return '${value.substring(0, maxLength - 1)}...';
 }
 
 String _firstName(String name) {
