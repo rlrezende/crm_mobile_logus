@@ -76,6 +76,7 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios
+          rm -rf Pods Podfile.lock
           pod install
       - name: Configure automatic code signing
         script: |
