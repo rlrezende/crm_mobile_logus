@@ -370,7 +370,6 @@ class _PrimaryMetricsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateLabel = asOf == null ? 'Sem data' : DateFormat('dd/MM/yyyy').format(asOf!);
     final yearLabel = (asOf ?? DateTime.now()).year.toString();
-    final isIbovespa = benchmarkLabel.toLowerCase() == 'ibovespa';
     return Column(
       children: [
         Container(
@@ -422,7 +421,7 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                     hideValues ? '••••' : _formatCurrency(dashboard.returns.month.value),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(isIbovespa ? dashboard.returns.month.benchmark?.abs() : dashboard.returns.month.benchmark)}',
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.month.benchmark)}',
                 accent: _performanceColor(dashboard.returns.month.percent),
               ),
             ),
@@ -436,7 +435,7 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                 secondary: hideValues ? '••••' : _formatCurrency(dashboard.returns.ytd.value),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(isIbovespa ? dashboard.returns.ytd.benchmark?.abs() : dashboard.returns.ytd.benchmark)}',
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.ytd.benchmark)}',
                 accent: _performanceColor(dashboard.returns.ytd.percent),
               ),
             ),
@@ -452,7 +451,7 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                     : (hideValues ? '••••' : _formatCurrency(dashboard.returns.twelveMonths.value)),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(isIbovespa ? dashboard.returns.twelveMonths.benchmark?.abs() : dashboard.returns.twelveMonths.benchmark)}',
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.twelveMonths.benchmark)}',
                 accent: _performanceColor(dashboard.returns.twelveMonths.percent),
               ),
             ),
