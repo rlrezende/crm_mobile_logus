@@ -60,7 +60,6 @@ workflows:
     max_build_duration: 90
     instance_type: mac_mini_m2
     environment:
-      flutter: stable
       xcode: latest
       cocoapods: default
       ios_signing:
@@ -72,6 +71,10 @@ workflows:
         APP_STORE_APP_ID: "6761010977"
         BUNDLE_ID: "com.logus.crm"
     scripts:
+      - name: Setup Flutter 3.41.4
+        script: |
+          git clone --branch 3.41.4 --depth 1 https://github.com/flutter/flutter.git /tmp/flutter_3_41
+          /tmp/flutter_3_41/bin/flutter --version
       - name: Detect Flutter project directory
         script: |
           if [ -f "pubspec.yaml" ]; then
@@ -94,9 +97,19 @@ workflows:
           : "${APP_STORE_CONNECT_KEY_ID:?Missing APP_STORE_CONNECT_KEY_ID}"
           : "${APP_STORE_CONNECT_ISSUER_ID:?Missing APP_STORE_CONNECT_ISSUER_ID}"
           : "${APP_STORE_CONNECT_PRIVATE_KEY:?Missing APP_STORE_CONNECT_PRIVATE_KEY}"
+          if ! printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" | grep -q "BEGIN PRIVATE KEY"; then
+            echo "APP_STORE_CONNECT_PRIVATE_KEY is invalid: missing BEGIN PRIVATE KEY"
+            exit 1
+          fi
+          if ! printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" | grep -q "END PRIVATE KEY"; then
+            echo "APP_STORE_CONNECT_PRIVATE_KEY is invalid: missing END PRIVATE KEY"
+            exit 1
+          fi
       - name: Install dependencies
         script: |
+          export PATH=/tmp/flutter_3_41/bin:$PATH
           cd "$APP_DIR"
+          flutter clean
           flutter pub get
       - name: Install CocoaPods
         script: |
@@ -113,11 +126,16 @@ workflows:
             echo "Invalid export method '$METHOD' (expected app-store)"
             exit 1
           fi
-          IOS_BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
+          if [ -n "${CM_BUILD_ID:-}" ] && printf '%s' "$CM_BUILD_ID" | grep -Eq '^[0-9]+$'; then
+            IOS_BUILD_NUMBER="$CM_BUILD_ID"
+          else
+            IOS_BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
+          fi
           echo "IOS_BUILD_NUMBER=$IOS_BUILD_NUMBER" >> "$CM_ENV"
           echo "Using iOS build number: $IOS_BUILD_NUMBER"
       - name: Build signed IPA
         script: |
+          export PATH=/tmp/flutter_3_41/bin:$PATH
           cd "$APP_DIR"
           flutter build ipa --release \
             --build-number="$IOS_BUILD_NUMBER" \
@@ -135,3 +153,5 @@ workflows:
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         submit_to_app_store: false
+        # Codemagic App Store Connect publishing doesn't support `wait_for_processing`.
+        # Processing status can be monitored in App Store Connect/TestFlight.
