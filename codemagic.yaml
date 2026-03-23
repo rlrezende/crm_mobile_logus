@@ -88,11 +88,38 @@ workflows:
           xcode-project use-profiles --project ios/Runner.xcodeproj
       - name: Validate export method and set build number
         script: |
-          METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" "$CM_EXPORT_OPTIONS_PATH" 2>/dev/null || true)
+          IOS_EXPORT_OPTIONS_PLIST="${CM_EXPORT_OPTIONS_PATH:-}"
+          if [ -n "$IOS_EXPORT_OPTIONS_PLIST" ] && [ -f "$IOS_EXPORT_OPTIONS_PLIST" ]; then
+            echo "Using Codemagic export options: $IOS_EXPORT_OPTIONS_PLIST"
+          elif [ -f "$HOME/export_options.plist" ]; then
+            IOS_EXPORT_OPTIONS_PLIST="$HOME/export_options.plist"
+            echo "Using existing export options: $IOS_EXPORT_OPTIONS_PLIST"
+          else
+            IOS_EXPORT_OPTIONS_PLIST="$HOME/export_options.plist"
+            cat > "$IOS_EXPORT_OPTIONS_PLIST" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+          </dict>
+          </plist>
+          PLIST
+            echo "Created fallback export options: $IOS_EXPORT_OPTIONS_PLIST"
+          fi
+
+          METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" "$IOS_EXPORT_OPTIONS_PLIST" 2>/dev/null || true)
           if [ "$METHOD" != "app-store" ]; then
             echo "Invalid export method '$METHOD' (expected app-store)"
             exit 1
           fi
+
+          echo "IOS_EXPORT_OPTIONS_PLIST=$IOS_EXPORT_OPTIONS_PLIST" >> "$CM_ENV"
+          echo "Using export method: $METHOD"
+
           if [ -n "${CM_BUILD_ID:-}" ] && printf '%s' "$CM_BUILD_ID" | grep -Eq '^[0-9]+$'; then
             IOS_BUILD_NUMBER="$CM_BUILD_ID"
           else
@@ -105,7 +132,7 @@ workflows:
           export PATH=/tmp/flutter_3_41/bin:$PATH
           flutter build ipa --release \
             --build-number="$IOS_BUILD_NUMBER" \
-            --export-options-plist="$CM_EXPORT_OPTIONS_PATH" \
+            --export-options-plist="$IOS_EXPORT_OPTIONS_PLIST" \
             --dart-define API_BASE_URL=$API_BASE_URL \
             --dart-define LOG_NETWORK=$LOG_NETWORK
     artifacts:
