@@ -50,8 +50,10 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Container(
         decoration: BoxDecoration(
+          color: Colors.black,
           image: DecorationImage(
             image: const AssetImage('assets/images/globo_bg.png'),
             fit: BoxFit.cover,
