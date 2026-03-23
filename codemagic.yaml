@@ -54,3 +54,84 @@ workflows:
       - build/**/outputs/**/*.aab
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
+
+  ios-testflight:
+    name: Logus Investimentos Cliente iOS TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.logus.crm
+      vars:
+        API_BASE_URL: https://crmapi.loguscapital.com:446/api
+        LOG_NETWORK: "false"
+        APP_STORE_APP_ID: "6761010977"
+        BUNDLE_ID: "com.logus.crm"
+    scripts:
+      - name: Detect Flutter project directory
+        script: |
+          if [ -f "pubspec.yaml" ]; then
+            echo "APP_DIR=." >> "$CM_ENV"
+          elif [ -f "crm_mobile_logus/pubspec.yaml" ]; then
+            echo "APP_DIR=crm_mobile_logus" >> "$CM_ENV"
+          else
+            echo "pubspec.yaml not found"
+            exit 1
+          fi
+      - name: Validate iOS project and Bundle ID
+        script: |
+          cd "$APP_DIR"
+          test -d ios
+          test -f ios/Runner.xcodeproj/project.pbxproj
+          test -f ios/Podfile
+          grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.logus.crm;" ios/Runner.xcodeproj/project.pbxproj
+      - name: Validate App Store Connect credentials
+        script: |
+          : "${APP_STORE_CONNECT_KEY_ID:?Missing APP_STORE_CONNECT_KEY_ID}"
+          : "${APP_STORE_CONNECT_ISSUER_ID:?Missing APP_STORE_CONNECT_ISSUER_ID}"
+          : "${APP_STORE_CONNECT_PRIVATE_KEY:?Missing APP_STORE_CONNECT_PRIVATE_KEY}"
+      - name: Install dependencies
+        script: |
+          cd "$APP_DIR"
+          flutter pub get
+      - name: Install CocoaPods
+        script: |
+          cd "$APP_DIR/ios"
+          pod install
+      - name: Configure automatic code signing
+        script: |
+          cd "$APP_DIR"
+          xcode-project use-profiles --project ios/Runner.xcodeproj
+      - name: Validate export method and set build number
+        script: |
+          METHOD=$(/usr/libexec/PlistBuddy -c "Print :method" "$CM_EXPORT_OPTIONS_PATH" 2>/dev/null || true)
+          if [ "$METHOD" != "app-store" ]; then
+            echo "Invalid export method '$METHOD' (expected app-store)"
+            exit 1
+          fi
+          IOS_BUILD_NUMBER="$(date +%Y%m%d%H%M%S)"
+          echo "IOS_BUILD_NUMBER=$IOS_BUILD_NUMBER" >> "$CM_ENV"
+          echo "Using iOS build number: $IOS_BUILD_NUMBER"
+      - name: Build signed IPA
+        script: |
+          cd "$APP_DIR"
+          flutter build ipa --release \
+            --build-number="$IOS_BUILD_NUMBER" \
+            --export-options-plist="$CM_EXPORT_OPTIONS_PATH" \
+            --dart-define API_BASE_URL="$API_BASE_URL" \
+            --dart-define LOG_NETWORK="$LOG_NETWORK"
+    artifacts:
+      - "**/build/ios/ipa/*.ipa"
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        submit_to_app_store: false

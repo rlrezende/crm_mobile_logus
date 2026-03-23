@@ -446,9 +446,9 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                 primary: hideValues
                     ? '••••'
                     : _formatPercent(dashboard.returns.twelveMonths.percent, withSignal: true),
-                secondary: dashboard.returns.twelveMonths.value == null
-                    ? null
-                    : (hideValues ? '••••' : _formatCurrency(dashboard.returns.twelveMonths.value)),
+                secondary: hideValues
+                    ? '••••'
+                    : _formatTwelveMonthsValue(dashboard.returns.twelveMonths),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
                     : '$benchmarkLabel: ${_formatPercent(dashboard.returns.twelveMonths.benchmark)}',
@@ -1494,6 +1494,15 @@ String _formatCurrency(double? value, {bool compact = false}) {
 
 String _formatCurrencyCompact(double value) {
   return _currencyCompactFormatter.format(value);
+}
+
+String _formatTwelveMonthsValue(ReturnMetric metric) {
+  final value = metric.value;
+  if (value == null) {
+    return '--';
+  }
+  final formatted = _formatCurrency(value);
+  return metric.valueEstimated ? '~$formatted' : formatted;
 }
 
 String _formatPercent(double? value, {bool withSignal = false}) {

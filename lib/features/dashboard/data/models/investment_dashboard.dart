@@ -69,12 +69,14 @@ class ReturnMetric {
     this.value,
     this.percent,
     this.benchmark,
+    required this.valueEstimated,
   });
 
   final bool available;
   final double? value;
   final double? percent;
   final double? benchmark;
+  final bool valueEstimated;
 
   factory ReturnMetric.fromJson(Map<String, dynamic> json) {
     return ReturnMetric(
@@ -82,6 +84,7 @@ class ReturnMetric {
       value: _toDoubleNullable(_readValue(json, 'value')),
       percent: _toDoubleNullable(_readValue(json, 'percent')),
       benchmark: _toDoubleNullable(_readValue(json, 'benchmark')),
+      valueEstimated: (_readValue(json, 'valueEstimated') as bool?) ?? false,
     );
   }
 }
