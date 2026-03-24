@@ -136,6 +136,8 @@ class _DashboardPageState extends State<DashboardPage> {
             }
 
             final dashboard = snapshot.data!;
+            final allocationClasses =
+                dashboard.classes.where((item) => !_isTotalCarteira(item.name)).toList();
             return RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
@@ -166,18 +168,18 @@ class _DashboardPageState extends State<DashboardPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                     child: _AllocationCard(
-                      dashboard: dashboard,
+                      classes: allocationClasses,
                       touchedIndex: _touchedPieIndex,
                       hideValues: _hideValues,
                       onTouch: (index, openDetails) {
                         setState(() => _touchedPieIndex = index);
                         if (openDetails &&
                             index >= 0 &&
-                            index < dashboard.classes.length) {
-                          _openClassAssets(dashboard.classes[index]);
+                            index < allocationClasses.length) {
+                          _openClassAssets(allocationClasses[index]);
                         }
                       },
-                      onOpenOverview: () => _openClassOverview(dashboard.classes),
+                      onOpenOverview: () => _openClassOverview(allocationClasses),
                     ),
                   ),
                   Padding(
@@ -565,14 +567,14 @@ class _MetricCard extends StatelessWidget {
 
 class _AllocationCard extends StatelessWidget {
   const _AllocationCard({
-    required this.dashboard,
+    required this.classes,
     required this.touchedIndex,
     required this.hideValues,
     required this.onTouch,
     required this.onOpenOverview,
   });
 
-  final InvestmentDashboardData dashboard;
+  final List<InvestmentClass> classes;
   final int touchedIndex;
   final bool hideValues;
   final void Function(int index, bool openDetails) onTouch;
@@ -580,7 +582,6 @@ class _AllocationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final classes = dashboard.classes.where((item) => !_isTotalCarteira(item.name)).toList();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1572,7 +1573,7 @@ String _firstName(String name) {
 
 bool _isTotalCarteira(String name) {
   final normalized = _normalizeLabel(name);
-  return normalized.contains('total da carteira') || normalized.contains('total carteira');
+  return RegExp(r'\btotal\b.*\bcarteira\b').hasMatch(normalized);
 }
 
 bool _isHiddenClassName(String name) {
