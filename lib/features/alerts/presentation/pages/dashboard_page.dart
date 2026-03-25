@@ -137,7 +137,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             final dashboard = snapshot.data!;
             final allocationClasses =
-                dashboard.classes.where((item) => !_isTotalCarteira(item.name)).toList();
+                dashboard.classes.where((item) => !_isHiddenClassName(item.name)).toList();
             return RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
@@ -1572,7 +1572,17 @@ String _firstName(String name) {
 }
 
 bool _isTotalCarteira(String name) {
-  final normalized = _normalizeLabel(name);
+  final normalized = _normalizeLabel(name).trim();
+  if (normalized.isEmpty) {
+    return false;
+  }
+  // Remove linhas de totalização que vêm no payload e não são classes reais.
+  if (normalized == 'total') {
+    return true;
+  }
+  if (normalized.contains('total disponivel')) {
+    return true;
+  }
   return RegExp(r'\btotal\b.*\bcarteira\b').hasMatch(normalized);
 }
 
