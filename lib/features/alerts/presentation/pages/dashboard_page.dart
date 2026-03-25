@@ -136,8 +136,9 @@ class _DashboardPageState extends State<DashboardPage> {
             }
 
             final dashboard = snapshot.data!;
-            final allocationClasses =
-                dashboard.classes.where((item) => !_isHiddenClassName(item.name)).toList();
+            final allocationClasses = dashboard.classes
+                .where((item) => !_isHiddenClassName(item.name, percent: item.percent))
+                .toList();
             return RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
@@ -192,7 +193,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                     child: _ActionButtons(
-                      onOpenClasses: () => _openClassOverview(dashboard.classes),
+                      onOpenClasses: () => _openClassOverview(allocationClasses),
                       onOpenContribution: () => _openContribution(dashboard),
                     ),
                   ),
@@ -423,8 +424,9 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                     hideValues ? '••••' : _formatCurrency(dashboard.returns.month.value),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.month.benchmark)}',
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.month.benchmark, withSignal: true)}',
                 accent: _performanceColor(dashboard.returns.month.percent),
+                benchmarkColor: _performanceColor(dashboard.returns.month.benchmark),
               ),
             ),
             SizedBox(
@@ -437,8 +439,9 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                 secondary: hideValues ? '••••' : _formatCurrency(dashboard.returns.ytd.value),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.ytd.benchmark)}',
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.ytd.benchmark, withSignal: true)}',
                 accent: _performanceColor(dashboard.returns.ytd.percent),
+                benchmarkColor: _performanceColor(dashboard.returns.ytd.benchmark),
               ),
             ),
             SizedBox(
@@ -453,8 +456,9 @@ class _PrimaryMetricsPanel extends StatelessWidget {
                     : _formatTwelveMonthsValue(dashboard.returns.twelveMonths),
                 benchmark: hideValues
                     ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.twelveMonths.benchmark)}',
+                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.twelveMonths.benchmark, withSignal: true)}',
                 accent: _performanceColor(dashboard.returns.twelveMonths.percent),
+                benchmarkColor: _performanceColor(dashboard.returns.twelveMonths.benchmark),
               ),
             ),
             SizedBox(
@@ -486,6 +490,7 @@ class _MetricCard extends StatelessWidget {
     this.secondary,
     this.benchmark,
     required this.accent,
+    this.benchmarkColor,
   });
 
   final String title;
@@ -493,6 +498,7 @@ class _MetricCard extends StatelessWidget {
   final String? secondary;
   final String? benchmark;
   final Color accent;
+  final Color? benchmarkColor;
 
   @override
   Widget build(BuildContext context) {
@@ -555,7 +561,7 @@ class _MetricCard extends StatelessWidget {
             value: benchmark,
             topSpacing: 6,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF0E4A87),
+                  color: benchmarkColor ?? const Color(0xFF0E4A87),
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -954,7 +960,9 @@ class AssetClassOverviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleClasses = classes.where((item) => !_isHiddenClassName(item.name)).toList();
+    final visibleClasses = classes
+        .where((item) => !_isHiddenClassName(item.name, percent: item.percent))
+        .toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -1571,23 +1579,37 @@ String _firstName(String name) {
   return parts.isEmpty ? trimmed : parts.first;
 }
 
-bool _isTotalCarteira(String name) {
+bool _isTotalCarteira(String name, {double? percent}) {
   final normalized = _normalizeLabel(name).trim();
-  if (normalized.isEmpty) {
+  final compact = normalized.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  if (compact.isEmpty) {
     return false;
   }
-  // Remove linhas de totalização que vêm no payload e não são classes reais.
-  if (normalized == 'total') {
+
+  if (compact == 'total') {
     return true;
   }
-  if (normalized.contains('total disponivel')) {
+
+  if (compact.contains('totaldisponivel')) {
     return true;
   }
-  return RegExp(r'\btotal\b.*\bcarteira\b').hasMatch(normalized);
+
+  if (compact.contains('total') && compact.contains('carteira')) {
+    return true;
+  }
+
+  // Alguns relatórios trazem a linha-resumo apenas como "Carteira" (100%).
+  if ((compact == 'carteira' || compact.startsWith('carteira')) &&
+      (percent ?? 0) >= 99.5) {
+    return true;
+  }
+
+  return false;
 }
 
-bool _isHiddenClassName(String name) {
-  return _isTotalCarteira(name) || _isCaixaBloqueado(name);
+bool _isHiddenClassName(String name, {double? percent}) {
+  return _isTotalCarteira(name, percent: percent) || _isCaixaBloqueado(name);
 }
 
 bool _isCaixaBloqueado(String name) {
