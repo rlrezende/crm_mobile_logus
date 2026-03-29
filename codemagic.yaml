@@ -8,6 +8,7 @@ workflows:
         - varivellogus
       xcode: latest
       cocoapods: default
+      java: 17
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.logus.crm
@@ -31,12 +32,27 @@ workflows:
         script: |
           export PATH=/tmp/flutter_3_41/bin:$PATH
           flutter precache --ios --android
+      - name: Select Java 17
+        script: |
+          export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME" >> "$CM_ENV"
       - name: Ensure Android SDK/NDK
         script: |
+          export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
           export ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-$ANDROID_HOME}
-          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+          export PATH="$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+
+          COMPILE_SDK=$(sed -n 's/^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' android/app/build.gradle | head -n 1)
+          if [ -z "$COMPILE_SDK" ]; then
+            COMPILE_SDK=36
+          fi
+
+          echo "Using compileSdk=$COMPILE_SDK"
           yes | sdkmanager --licenses >/dev/null || true
-          yes | sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;29.0.14033849"
+          yes | sdkmanager "platforms;android-${COMPILE_SDK}" "ndk;29.0.14033849"
+          yes | sdkmanager "build-tools;${COMPILE_SDK}.0.0" || yes | sdkmanager "build-tools;35.0.0"
       - name: Install dependencies
         script: |
           export PATH=/tmp/flutter_3_41/bin:$PATH
