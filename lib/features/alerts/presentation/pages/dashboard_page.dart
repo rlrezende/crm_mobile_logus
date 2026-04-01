@@ -1207,7 +1207,17 @@ class PerformanceContributionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Performance Contribuição Financeira'),
+        titleSpacing: 0,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Performance Contribuição Financeira',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -1288,7 +1298,9 @@ class _ContributionBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = points.where((point) => !point.isTotal).toList();
+    final rows = points
+        .where((point) => !point.isTotal && !_isHiddenContributionName(point.name))
+        .toList();
     if (rows.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
@@ -1610,6 +1622,25 @@ bool _isTotalCarteira(String name, {double? percent}) {
 
 bool _isHiddenClassName(String name, {double? percent}) {
   return _isTotalCarteira(name, percent: percent) || _isCaixaBloqueado(name);
+}
+
+bool _isHiddenContributionName(String name) {
+  final normalized = _normalizeLabel(name);
+  final compact = normalized.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  if (compact.isEmpty) {
+    return false;
+  }
+
+  final isTotalDisponivel = compact.contains('totaldispon') ||
+      compact.contains('disponiveltotal') ||
+      (normalized.contains('total') && normalized.contains('disponiv'));
+  if (isTotalDisponivel) {
+    return true;
+  }
+
+  return compact.contains('caixabloquead') ||
+      (normalized.contains('caixa') && normalized.contains('bloquead'));
 }
 
 bool _isCaixaBloqueado(String name) {

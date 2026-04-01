@@ -193,8 +193,8 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: controller.isLoading
                         ? null
                         : controller.authenticateWithBiometrics,
-                    icon: const Icon(Icons.face_retouching_natural),
-                    label: const Text('Entrar com biometria / Face ID'),
+                    icon: Icon(controller.biometricIcon),
+                    label: Text(controller.biometricButtonLabel),
                   ),
                 ]);
               }
@@ -213,4 +213,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

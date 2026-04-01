@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
@@ -39,14 +40,44 @@ class AuthController extends ChangeNotifier {
   AuthSession? _cachedSession;
   AuthSession? _activeSession;
   bool _biometricsAvailable = false;
+  BiometricKind _biometricKind = BiometricKind.none;
 
   UserProfile? get currentUser => _activeSession?.user;
   String? get lastUsedEmail => _cachedSession?.email;
   bool get isLoading => status == AuthStatus.loading;
   bool get canUseBiometrics => _biometricsAvailable && _cachedSession != null;
+  IconData get biometricIcon => _biometricKind == BiometricKind.face
+      ? Icons.face_retouching_natural
+      : Icons.fingerprint;
+  String get biometricButtonLabel {
+    switch (_biometricKind) {
+      case BiometricKind.face:
+        return 'Entrar com Face ID';
+      case BiometricKind.fingerprint:
+        return 'Entrar com impressão digital';
+      case BiometricKind.generic:
+        return 'Entrar com biometria';
+      case BiometricKind.none:
+        return 'Entrar com biometria';
+    }
+  }
+  String get biometricReason {
+    switch (_biometricKind) {
+      case BiometricKind.face:
+        return 'Confirme com Face ID para acessar o CRM Logus';
+      case BiometricKind.fingerprint:
+        return 'Confirme com impressão digital para acessar o CRM Logus';
+      case BiometricKind.generic:
+        return 'Confirme com biometria para acessar o CRM Logus';
+      case BiometricKind.none:
+        return 'Confirme sua identidade para acessar o CRM Logus';
+    }
+  }
 
   Future<void> _bootstrap() async {
-    _biometricsAvailable = await _biometricAuthService.isAvailable();
+    final availability = await _biometricAuthService.getAvailability();
+    _biometricsAvailable = availability.available;
+    _biometricKind = availability.kind;
     final storedSession = await _tokenStorage.readSession();
 
     if (storedSession != null && !_isExpired(storedSession.expiresAt)) {
@@ -79,6 +110,9 @@ class AuthController extends ChangeNotifier {
       );
       final session = AuthSession(email: email, response: response);
       await _tokenStorage.saveSession(session);
+      final availability = await _biometricAuthService.getAvailability();
+      _biometricsAvailable = availability.available;
+      _biometricKind = availability.kind;
       _cachedSession = session;
       _activateSession(session);
     } catch (error) {
@@ -100,7 +134,7 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
 
     final approved = await _biometricAuthService.authenticate(
-      reason: 'Confirme com Face ID / biometria para acessar o CRM Logus',
+      reason: biometricReason,
     );
 
     if (!approved) {
