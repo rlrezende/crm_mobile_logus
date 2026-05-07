@@ -409,66 +409,82 @@ class _PrimaryMetricsPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
+        Column(
           children: [
-            SizedBox(
-              width: _cardWidth(context),
-              child: _MetricCard(
-                title: 'Mês',
-                primary: hideValues
-                    ? '••••'
-                    : _formatPercent(dashboard.returns.month.percent, withSignal: true),
-                secondary:
-                    hideValues ? '••••' : _formatCurrency(dashboard.returns.month.value),
-                benchmark: hideValues
-                    ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.month.benchmark, withSignal: true)}',
-                accent: _performanceColor(dashboard.returns.month.percent),
-                benchmarkColor: _performanceColor(dashboard.returns.month.benchmark),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _MetricCard(
+                      title: 'Mês',
+                      primary: hideValues
+                          ? '••••'
+                          : _formatPercent(dashboard.returns.month.percent, withSignal: true),
+                      secondary: hideValues
+                          ? '••••'
+                          : _formatCurrency(dashboard.returns.month.value),
+                      benchmark: hideValues
+                          ? '$benchmarkLabel: ••••'
+                          : '$benchmarkLabel: ${_formatPercent(dashboard.returns.month.benchmark, withSignal: true)}',
+                      accent: _performanceColor(dashboard.returns.month.percent),
+                      benchmarkColor: _performanceColor(dashboard.returns.month.benchmark),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _MetricCard(
+                      title: yearLabel,
+                      primary: hideValues
+                          ? '••••'
+                          : _formatPercent(dashboard.returns.ytd.percent, withSignal: true),
+                      secondary: hideValues
+                          ? '••••'
+                          : _formatCurrency(dashboard.returns.ytd.value),
+                      benchmark: hideValues
+                          ? '$benchmarkLabel: ••••'
+                          : '$benchmarkLabel: ${_formatPercent(dashboard.returns.ytd.benchmark, withSignal: true)}',
+                      accent: _performanceColor(dashboard.returns.ytd.percent),
+                      benchmarkColor: _performanceColor(dashboard.returns.ytd.benchmark),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(
-              width: _cardWidth(context),
-              child: _MetricCard(
-                title: yearLabel,
-                primary: hideValues
-                    ? '••••'
-                    : _formatPercent(dashboard.returns.ytd.percent, withSignal: true),
-                secondary: hideValues ? '••••' : _formatCurrency(dashboard.returns.ytd.value),
-                benchmark: hideValues
-                    ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.ytd.benchmark, withSignal: true)}',
-                accent: _performanceColor(dashboard.returns.ytd.percent),
-                benchmarkColor: _performanceColor(dashboard.returns.ytd.benchmark),
-              ),
-            ),
-            SizedBox(
-              width: _cardWidth(context),
-              child: _MetricCard(
-                title: '12 Meses',
-                primary: hideValues
-                    ? '••••'
-                    : _formatPercent(dashboard.returns.twelveMonths.percent, withSignal: true),
-                secondary: hideValues
-                    ? '••••'
-                    : _formatTwelveMonthsValue(dashboard.returns.twelveMonths),
-                benchmark: hideValues
-                    ? '$benchmarkLabel: ••••'
-                    : '$benchmarkLabel: ${_formatPercent(dashboard.returns.twelveMonths.benchmark, withSignal: true)}',
-                accent: _performanceColor(dashboard.returns.twelveMonths.percent),
-                benchmarkColor: _performanceColor(dashboard.returns.twelveMonths.benchmark),
-              ),
-            ),
-            SizedBox(
-              width: _cardWidth(context),
-              child: _MetricCard(
-                title: 'Volatilidade (90 dias)',
-                primary: hideValues ? '••••' : _formatPercent(dashboard.volatility90Days),
-                secondary: null,
-                benchmark: null,
-                accent: const Color(0xFF006E6D),
+            const SizedBox(height: 10),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _MetricCard(
+                      title: '12 Meses',
+                      primary: hideValues
+                          ? '••••'
+                          : _formatPercent(dashboard.returns.twelveMonths.percent, withSignal: true),
+                      secondary: hideValues
+                          ? '••••'
+                          : _formatTwelveMonthsValue(dashboard.returns.twelveMonths),
+                      benchmark: hideValues
+                          ? '$benchmarkLabel: ••••'
+                          : '$benchmarkLabel: ${_formatPercent(dashboard.returns.twelveMonths.benchmark, withSignal: true)}',
+                      accent: _performanceColor(dashboard.returns.twelveMonths.percent),
+                      benchmarkColor: _performanceColor(dashboard.returns.twelveMonths.benchmark),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _MetricCard(
+                      title: 'Volatilidade (90 dias)',
+                      primary: hideValues
+                          ? '••••'
+                          : _formatPercent(dashboard.volatility90Days),
+                      secondary: null,
+                      benchmark: null,
+                      accent: const Color(0xFF006E6D),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -478,10 +494,6 @@ class _PrimaryMetricsPanel extends StatelessWidget {
   }
 }
 
-double _cardWidth(BuildContext context) {
-  final width = MediaQuery.of(context).size.width - 32;
-  return width >= 740 ? (width - 20) / 3 : (width - 10) / 2;
-}
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
@@ -964,6 +976,7 @@ class AssetClassOverviewPage extends StatelessWidget {
         .where((item) => !_isHiddenClassName(item.name, percent: item.percent))
         .toList();
     return Scaffold(
+      backgroundColor: const Color(0xFFF3F5F8),
       appBar: AppBar(
         title: const Text(
           'Abertura da Classe de Ativos',
