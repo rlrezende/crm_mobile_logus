@@ -83,17 +83,8 @@ workflows:
           flutter test
       - name: Set Android build number
         script: |
-          # Default: use current Unix time (seconds) to keep versionCode increasing.
-          # Optional override: set ANDROID_BUILD_NUMBER in Codemagic variables.
-          ANDROID_BUILD_NUMBER="${ANDROID_BUILD_NUMBER:-$(date +%s)}"
-          if ! printf '%s' "$ANDROID_BUILD_NUMBER" | grep -Eq '^[0-9]+$'; then
-            echo "Invalid ANDROID_BUILD_NUMBER='$ANDROID_BUILD_NUMBER' (must be numeric)"
-            exit 1
-          fi
-          if [ "$ANDROID_BUILD_NUMBER" -gt 2100000000 ]; then
-            echo "Invalid ANDROID_BUILD_NUMBER='$ANDROID_BUILD_NUMBER' (must be <= 2100000000)"
-            exit 1
-          fi
+          # Sempre usa timestamp atual — garante versionCode único e crescente a cada build.
+          ANDROID_BUILD_NUMBER=$(date +%s)
           echo "ANDROID_BUILD_NUMBER=$ANDROID_BUILD_NUMBER" >> "$CM_ENV"
           echo "Using Android build number: $ANDROID_BUILD_NUMBER"
       - name: Build Android APK (release)
