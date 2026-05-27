@@ -1149,9 +1149,10 @@ class ClassAssetsPage extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Card(
                   elevation: 0,
+                  color: const Color(0xFFDEEAF7),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
-                    side: const BorderSide(color: Color(0xFFDCE4ED)),
+                    side: const BorderSide(color: Color(0xFFB3CFEA)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -1170,10 +1171,11 @@ class ClassAssetsPage extends StatelessWidget {
                           spacing: 10,
                           runSpacing: 8,
                           children: [
-                            _InfoPill(label: 'Valor', value: _formatCurrency(asset.value)),
-                            _InfoPill(label: '% Carteira', value: _formatPercent(asset.portfolioPercent)),
+                            _InfoPill(label: 'Valor', value: _formatCurrency(asset.value), backgroundColor: Colors.white),
+                            _InfoPill(label: '% Carteira', value: _formatPercent(asset.portfolioPercent), backgroundColor: Colors.white),
                             _InfoPill(
                               label: 'Mês',
+                              backgroundColor: Colors.white,
                               value: _formatReturnLines(
                                 nominal: _nominalFromBase(
                                   asset.value,
@@ -1184,6 +1186,7 @@ class ClassAssetsPage extends StatelessWidget {
                             ),
                             _InfoPill(
                               label: 'Retorno Ano',
+                              backgroundColor: Colors.white,
                               value: _formatReturnLines(
                                 nominal: _nominalFromBase(
                                   asset.value,
@@ -1193,7 +1196,18 @@ class ClassAssetsPage extends StatelessWidget {
                               ),
                             ),
                             if ((asset.liquidity ?? '').trim().isNotEmpty)
-                              _InfoPill(label: 'Liquidez', value: asset.liquidity!.trim()),
+                              _InfoPill(label: 'Liquidez', value: asset.liquidity!.trim(), backgroundColor: Colors.white),
+                            if ((asset.purchaseDate ?? '').trim().isNotEmpty)
+                              _InfoPill(label: 'Data Compra', value: _formatDate(asset.purchaseDate), backgroundColor: Colors.white),
+                            if (asset.returnSincePurchaseValue != null || asset.returnSincePurchasePercent != null)
+                              _InfoPill(
+                                label: 'Retorno Compra',
+                                backgroundColor: Colors.white,
+                                value: _formatReturnLines(
+                                  nominal: asset.returnSincePurchaseValue,
+                                  percent: asset.returnSincePurchasePercent,
+                                ),
+                              ),
                           ],
                         ),
                       ],
@@ -1435,17 +1449,19 @@ class _InfoPill extends StatelessWidget {
   const _InfoPill({
     required this.label,
     required this.value,
+    this.backgroundColor,
   });
 
   final String label;
   final String value;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F8FC),
+        color: backgroundColor ?? const Color(0xFFF5F8FC),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -1665,6 +1681,13 @@ String _formatReturnLines({double? nominal, double? percent}) {
   final nominalLabel = _formatCurrency(nominal);
   final percentLabel = _formatPercent(percent, withSignal: true);
   return '$nominalLabel\n$percentLabel';
+}
+
+String _formatDate(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return '--';
+  final parts = raw.trim().split('/');
+  if (parts.length == 3) return raw.trim();
+  return raw.trim();
 }
 
 double? _nominalFromBase(double? baseValue, double? percent) {

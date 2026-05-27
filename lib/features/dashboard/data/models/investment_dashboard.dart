@@ -136,6 +136,9 @@ class InvestmentAsset {
     this.monthReturnPercent,
     this.ytdReturnPercent,
     this.liquidity,
+    this.purchaseDate,
+    this.returnSincePurchaseValue,
+    this.returnSincePurchasePercent,
   });
 
   final String name;
@@ -144,6 +147,9 @@ class InvestmentAsset {
   final double? monthReturnPercent;
   final double? ytdReturnPercent;
   final String? liquidity;
+  final String? purchaseDate;
+  final double? returnSincePurchaseValue;
+  final double? returnSincePurchasePercent;
 
   factory InvestmentAsset.fromJson(Map<String, dynamic> json) {
     return InvestmentAsset(
@@ -153,6 +159,9 @@ class InvestmentAsset {
       monthReturnPercent: _toDoubleNullable(_readValue(json, 'monthReturnPercent')),
       ytdReturnPercent: _toDoubleNullable(_readValue(json, 'ytdReturnPercent')),
       liquidity: _readValue(json, 'liquidity') as String?,
+      purchaseDate: _readValue(json, 'purchaseDate') as String?,
+      returnSincePurchaseValue: _toDoubleNullable(_readValue(json, 'returnSincePurchaseValue')),
+      returnSincePurchasePercent: _toDoubleNullable(_readValue(json, 'returnSincePurchasePercent')),
     );
   }
 }
