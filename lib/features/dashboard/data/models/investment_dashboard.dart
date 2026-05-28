@@ -135,6 +135,8 @@ class InvestmentAsset {
     this.portfolioPercent,
     this.monthReturnPercent,
     this.ytdReturnPercent,
+    this.monthReturnRS,
+    this.ytdReturnRS,
     this.liquidity,
     this.purchaseDate,
     this.returnSincePurchaseValue,
@@ -146,6 +148,8 @@ class InvestmentAsset {
   final double? portfolioPercent;
   final double? monthReturnPercent;
   final double? ytdReturnPercent;
+  final double? monthReturnRS;
+  final double? ytdReturnRS;
   final String? liquidity;
   final String? purchaseDate;
   final double? returnSincePurchaseValue;
@@ -158,6 +162,8 @@ class InvestmentAsset {
       portfolioPercent: _toDoubleNullable(_readValue(json, 'portfolioPercent')),
       monthReturnPercent: _toDoubleNullable(_readValue(json, 'monthReturnPercent')),
       ytdReturnPercent: _toDoubleNullable(_readValue(json, 'ytdReturnPercent')),
+      monthReturnRS: _toDoubleNullable(_readValue(json, 'monthReturnRS')),
+      ytdReturnRS: _toDoubleNullable(_readValue(json, 'ytdReturnRS')),
       liquidity: _readValue(json, 'liquidity') as String?,
       purchaseDate: _readValue(json, 'purchaseDate') as String?,
       returnSincePurchaseValue: _toDoubleNullable(_readValue(json, 'returnSincePurchaseValue')),

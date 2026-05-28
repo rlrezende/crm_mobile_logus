@@ -1177,10 +1177,7 @@ class ClassAssetsPage extends StatelessWidget {
                               label: 'Mês',
                               backgroundColor: Colors.white,
                               value: _formatReturnLines(
-                                nominal: _nominalFromBase(
-                                  asset.value,
-                                  asset.monthReturnPercent,
-                                ),
+                                nominal: asset.monthReturnRS ?? _nominalFromBase(asset.value, asset.monthReturnPercent),
                                 percent: asset.monthReturnPercent,
                               ),
                             ),
@@ -1188,10 +1185,7 @@ class ClassAssetsPage extends StatelessWidget {
                               label: 'Retorno Ano',
                               backgroundColor: Colors.white,
                               value: _formatReturnLines(
-                                nominal: _nominalFromBase(
-                                  asset.value,
-                                  asset.ytdReturnPercent,
-                                ),
+                                nominal: asset.ytdReturnRS ?? _nominalFromBase(asset.value, asset.ytdReturnPercent),
                                 percent: asset.ytdReturnPercent,
                               ),
                             ),
