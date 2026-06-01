@@ -1177,7 +1177,7 @@ class ClassAssetsPage extends StatelessWidget {
                               label: 'Mês',
                               backgroundColor: Colors.white,
                               value: _formatReturnLines(
-                                nominal: asset.monthReturnRS ?? _nominalFromBase(asset.value, asset.monthReturnPercent),
+                                nominal: asset.monthReturnRS,
                                 percent: asset.monthReturnPercent,
                               ),
                             ),
@@ -1185,7 +1185,7 @@ class ClassAssetsPage extends StatelessWidget {
                               label: 'Retorno Ano',
                               backgroundColor: Colors.white,
                               value: _formatReturnLines(
-                                nominal: asset.ytdReturnRS ?? _nominalFromBase(asset.value, asset.ytdReturnPercent),
+                                nominal: asset.ytdReturnRS,
                                 percent: asset.ytdReturnPercent,
                               ),
                             ),
@@ -1682,13 +1682,6 @@ String _formatDate(String? raw) {
   final parts = raw.trim().split('/');
   if (parts.length == 3) return raw.trim();
   return raw.trim();
-}
-
-double? _nominalFromBase(double? baseValue, double? percent) {
-  if (baseValue == null || percent == null) {
-    return null;
-  }
-  return baseValue * percent / 100;
 }
 
 String _normalizeLabel(String value) {
