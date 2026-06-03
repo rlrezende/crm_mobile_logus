@@ -925,7 +925,7 @@ class _LiquidityTotalRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalLabel = total.label.trim().isEmpty ? 'Total' : total.label.trim();
+    final totalLabel = total.label.trim().isEmpty ? 'Total Líquido' : total.label.trim();
 
     return Row(
       children: [
