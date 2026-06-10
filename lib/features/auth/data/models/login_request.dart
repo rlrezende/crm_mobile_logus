@@ -10,5 +10,6 @@ class LoginRequest {
   Map<String, dynamic> toJson() => {
         'email': email,
         'password': password,
+        'clientType': 'mobile',
       };
 }

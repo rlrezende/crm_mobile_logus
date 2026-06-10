@@ -16,18 +16,28 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _initializedEmail = false;
+  bool _autoAuthTriggered = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_initializedEmail) {
-      return;
+    final controller = Provider.of<AuthController>(context, listen: false);
+
+    if (!_initializedEmail) {
+      final email = controller.lastUsedEmail;
+      if (email != null) {
+        _emailController.text = email;
+      }
+      _initializedEmail = true;
     }
-    final email = Provider.of<AuthController>(context, listen: false).lastUsedEmail;
-    if (email != null) {
-      _emailController.text = email;
+
+    if (!_autoAuthTriggered && controller.pendingAutoAuthentication) {
+      _autoAuthTriggered = true;
+      controller.consumePendingAutoAuthentication();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) controller.authenticateWithBiometrics();
+      });
     }
-    _initializedEmail = true;
   }
 
   @override

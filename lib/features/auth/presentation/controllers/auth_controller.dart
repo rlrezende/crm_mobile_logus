@@ -41,11 +41,17 @@ class AuthController extends ChangeNotifier {
   AuthSession? _activeSession;
   bool _biometricsAvailable = false;
   BiometricKind _biometricKind = BiometricKind.none;
+  bool _pendingAutoAuthentication = false;
 
   UserProfile? get currentUser => _activeSession?.user;
   String? get lastUsedEmail => _cachedSession?.email;
   bool get isLoading => status == AuthStatus.loading;
   bool get canUseBiometrics => _biometricsAvailable && _cachedSession != null;
+  bool get pendingAutoAuthentication => _pendingAutoAuthentication;
+
+  void consumePendingAutoAuthentication() {
+    _pendingAutoAuthentication = false;
+  }
   IconData get biometricIcon => _biometricKind == BiometricKind.face
       ? Icons.face_retouching_natural
       : Icons.fingerprint;
@@ -84,6 +90,7 @@ class AuthController extends ChangeNotifier {
       _cachedSession = storedSession;
       if (_biometricsAvailable) {
         status = AuthStatus.needsBiometrics;
+        _pendingAutoAuthentication = true;
       } else {
         _activateSession(storedSession);
       }
